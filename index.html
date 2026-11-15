@@ -59,15 +59,17 @@ input,select,textarea{font:inherit;color:var(--ink)}
 
 /* ---------- shell ---------- */
 #app{min-height:100vh;padding-bottom:calc(76px + var(--safe-b))}
-header{position:sticky;top:0;z-index:20;color:#fff;padding:calc(14px + var(--safe-t)) 18px 46px;
+header{position:sticky;top:0;z-index:20;color:#fff;padding:calc(14px + var(--safe-t)) 18px 16px;
   background:radial-gradient(120% 120% at 90% -20%, #12705c 0%, transparent 55%),linear-gradient(150deg,var(--dom2),var(--dom) 70%)}
+/* Green skirt below the sticky header: cards overlap THIS (not the header), so nothing gets clipped. */
+.skirt{height:34px;background:var(--dom)}
 header .row{display:flex;align-items:center;justify-content:space-between;gap:10px}
 header .hi{font-size:13px;color:#bcd9cf}
 header .name{font-size:19px;font-weight:800;letter-spacing:-.01em}
 header .acts{display:flex;gap:8px}
 .iconbtn{width:38px;height:38px;border-radius:12px;background:rgba(255,255,255,.14);display:flex;align-items:center;justify-content:center;font-size:17px;backdrop-filter:blur(6px)}
 .iconbtn:active{transform:scale(.94)}
-main{max-width:640px;margin:-30px auto 0;padding:0 16px;position:relative;z-index:5}
+main{max-width:640px;margin:-20px auto 0;padding:0 16px;position:relative;z-index:5}
 .card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:16px;box-shadow:0 8px 24px rgba(18,36,29,.07);margin-bottom:14px;animation:rise .4s ease both}
 @keyframes rise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
 .card h3{font-size:14px;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between}
@@ -146,6 +148,7 @@ nav button.on .n{background:linear-gradient(140deg,var(--gold2),var(--gold));col
       </div>
     </div>
   </header>
+  <div class="skirt" aria-hidden="true"></div>
   <main><div id="installBanner"></div><div id="view"></div></main>
   <nav id="nav"></nav>
 </div>
