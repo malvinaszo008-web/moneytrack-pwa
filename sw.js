@@ -21,7 +21,7 @@ self.addEventListener('fetch', function (e) {
   var req = e.request;
   if (req.method !== 'GET') return; // never cache API POST / mutations
   var url = new URL(req.url);
-  if (url.origin !== self.location.origin) return; // GAS API & Drive: pass through
+  if (url.origin !== self.location.origin) return; // backend API & Drive: pass through
 
   // Navigations: ALWAYS revalidate with the network (bypass the HTTP cache,
   // which on GitHub Pages is fresh for 10 min), fall back to shell only offline.
