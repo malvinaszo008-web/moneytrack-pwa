@@ -128,13 +128,12 @@ nav button.on .n{background:linear-gradient(140deg,var(--gold2),var(--gold));col
   <div class="auth-card">
     <div class="logo">M</div>
     <h1>MoneyTrack</h1>
-    <p class="tag">Uang & absensi dalam satu genggaman.</p>
-    <div class="tabs"><button id="tabLogin" class="on">Masuk</button><button id="tabReg">Daftar</button></div>
-    <div id="regName" class="field hidden"><label>Nama lengkap</label><input id="aName" placeholder="Nama kamu"></div>
-    <div class="field"><label>Email</label><input id="aEmail" type="email" autocomplete="username" placeholder="nama@perusahaan.com"></div>
-    <div class="field"><label>Password</label><input id="aPass" type="password" autocomplete="current-password" placeholder="Minimal 8 karakter"></div>
-    <button class="btn block" id="aGo">Masuk</button>
+    <p class="tag">Konsol Super Admin. Data tersimpan di Cloudflare D1.</p>
+    <div class="field"><label>Email Super Admin</label><input id="aEmail" type="email" autocomplete="username" placeholder="superadmin@moneytrack.local"></div>
+    <div class="field"><label>Password</label><input id="aPass" type="password" autocomplete="current-password" placeholder="Password"></div>
+    <button class="btn block" id="aGo">Masuk sebagai Super Admin</button>
     <div class="err" id="aErr"></div>
+    <p class="muted small" style="margin-top:14px;text-align:center">Hanya akun ber-role <b>super_admin</b> yang bisa masuk.</p>
   </div>
 </div>
 
@@ -160,12 +159,12 @@ nav button.on .n{background:linear-gradient(140deg,var(--gold2),var(--gold));col
 <script>
 'use strict';
 var EXEC='https://moneytrack-api.malvinaszo008.workers.dev';
-var S={token:null,user:null,tab:'home',mode:'login',f:{}};
+var S={token:null,user:null,tab:'home',f:{},busyCheck:false};
 function $(s){return document.querySelector(s)}
 function esc(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
 function rp(n){var x=Math.round(Number(n)||0);var neg=x<0;return (neg?'-Rp ':'Rp ')+Math.abs(x).toString().replace(/\B(?=(\d{3})+(?!\d))/g,'.')}
 function fdate(v){if(!v)return '—';var s=String(v).slice(0,10).split('-');return s.length===3?s[2]+'/'+s[1]+'/'+s[0]:String(v)}
-function toast(m,k){var t=$('#toast');t.textContent=m;t.className=k||'';clearTimeout(t._h);t._h=setTimeout(function(){t.className='hidden'},3000)}
+function toast(m,k,ms){var t=$('#toast');t.textContent=m;t.className=k||'';clearTimeout(t._h);t._h=setTimeout(function(){t.className='hidden'},ms||3000)}
 function store(k,v){try{localStorage.setItem(k,v)}catch(e){}}
 function read(k){try{return localStorage.getItem(k)}catch(e){return null}}
 function drop(k){try{localStorage.removeItem(k)}catch(e){}}
@@ -197,17 +196,19 @@ function closeSheet(){$('#overlay').classList.add('hidden');$('#sheet').innerHTM
 $('#overlay').addEventListener('click',function(e){if(e.target===this)closeSheet()});
 function confirmSheet(title,msg,yes,fn){openSheet('<h3>'+esc(title)+'</h3><p class="muted">'+esc(msg)+'</p><div class="actions"><button class="btn ghost" onclick="closeSheet()">Batal</button><button class="btn danger" id="cfYes">'+esc(yes)+'</button></div>');$('#cfYes').onclick=function(){closeSheet();fn()}}
 
-/* ---------- auth ---------- */
-function setMode(m){S.mode=m;$('#tabLogin').classList.toggle('on',m==='login');$('#tabReg').classList.toggle('on',m==='reg');$('#regName').classList.toggle('hidden',m==='login');$('#aGo').textContent=m==='login'?'Masuk':'Daftar'}
-$('#tabLogin').onclick=function(){setMode('login')};$('#tabReg').onclick=function(){setMode('reg')};
+/* ---------- auth (khusus super admin) ---------- */
+function isSuperAdmin(u){return !!u&&u.role==='super_admin'}
 $('#aGo').onclick=function(){
   var email=$('#aEmail').value.trim(),pass=$('#aPass').value;$('#aErr').textContent='';
   if(!email||!pass){$('#aErr').textContent='Email & password wajib diisi.';return}
   $('#aGo').disabled=true;
-  var act=S.mode==='login'?'POST /auth/login':'POST /auth/register';
-  var data={email:email,password:pass};if(S.mode==='reg')data.name=$('#aName').value.trim();
-  api(act,data,'').then(function(d){S.token=d.token;S.user=d.user;store('mt_pwa_token',d.token);enterApp();toast('Selamat datang, '+d.user.name,'good')})
-    .catch(function(e){$('#aErr').textContent=e.message})
+  api('POST /auth/login',{email:email,password:pass},'').then(function(d){
+    if(!isSuperAdmin(d.user)){
+      api('POST /auth/logout',{},d.token).catch(function(){});
+      throw new Error('Akun ini bukan Super Admin. PWA ini khusus Super Admin.');
+    }
+    S.token=d.token;S.user=d.user;store('mt_pwa_token',d.token);enterApp();toast('Selamat datang, '+d.user.name,'good')
+  }).catch(function(e){$('#aErr').textContent=e.message})
     .then(function(){$('#aGo').disabled=false});
 };
 $('#aPass').addEventListener('keydown',function(e){if(e.key==='Enter')$('#aGo').click()});
@@ -216,7 +217,7 @@ function enterApp(){$('#auth').classList.add('hidden');$('#app').classList.remov
 function logout(){api('POST /auth/logout',{}).catch(function(){});S.token=null;S.user=null;drop('mt_pwa_token');showAuth()}
 
 /* ---------- nav / router ---------- */
-function isAdmin(){return S.user&&['admin','super_admin'].indexOf(S.user.role)>=0}
+function isAdmin(){return !!(S.user&&(S.user.role==='admin'||S.user.role==='super_admin'))}
 var TABS=[['home','🏠','Home'],['money','💰','Uang'],['att','📍','Absen'],['leave','🗓','Izin'],['profile','👤','Profil']];
 function buildNav(){var t=TABS.slice();if(isAdmin())t.push(['admin','🛠','Admin']);$('#nav').innerHTML=t.map(function(x){return '<button data-t="'+x[0]+'"><span class="n">'+x[1]+'</span>'+x[2]+'</button>'}).join('');document.querySelectorAll('#nav button').forEach(function(b){b.onclick=function(){setTab(b.dataset.t)}})}
 function setTab(t){S.tab=t;document.querySelectorAll('#nav button').forEach(function(b){b.classList.toggle('on',b.dataset.t===t)});var g=new Date().getHours();$('#hGreet').textContent=(g<11?'Selamat pagi ':g<15?'Selamat siang 🌤':g<18?'Selamat sore 🌇':'Selamat malam 🌙');$('#hName').textContent=S.user.name;RENDER[t]()}
@@ -281,17 +282,71 @@ RENDER.att=function(){loading();
     h+='<div class="card"><h3>Riwayat</h3><div class="list">'+(hist.map(function(x){return '<div class="item"><div class="ic" style="background:#e3eef7">📍</div><div class="t"><b>'+fdate(x.date)+'</b><span>'+esc(x.office_location||'')+' · '+(x.check_in_time||'—')+' → '+(x.check_out_time||'—')+'</span></div>'+badge(x.status)+'</div>'}).join('')||'<div class="empty">Belum ada riwayat.</div>')+'</div></div>';
     $('#view').innerHTML=h;
   }).catch(failFor('att'))};
-function getPos(){return new Promise(function(res,rej){if(!navigator.geolocation)return rej(new Error('GPS tidak tersedia.'));navigator.geolocation.getCurrentPosition(function(p){res({latitude:p.coords.latitude,longitude:p.coords.longitude})},function(){rej(new Error('Izin GPS ditolak. Aktifkan lokasi.'))},{enableHighAccuracy:true,timeout:15000})})}
-function getSelfie(){return new Promise(function(res,rej){var inp=$('#selfieInput');inp.value='';inp.onchange=function(){var f=inp.files[0];if(!f)return rej(new Error('Selfie dibatalkan.'));var rd=new FileReader();rd.onload=function(){var s=String(rd.result);res({base64:s.split(',')[1],mime:f.type||'image/jpeg',filename:f.name||'selfie.jpg'})};rd.onerror=function(){rej(new Error('Gagal membaca foto.'))};rd.readAsDataURL(f)};inp.click()})}
+function getPos(){return new Promise(function(res,rej){
+  if(!navigator.geolocation)return rej(new Error('GPS tidak tersedia di browser ini.'));
+  navigator.geolocation.getCurrentPosition(
+    function(p){res({latitude:p.coords.latitude,longitude:p.coords.longitude,accuracy:p.coords.accuracy})},
+    function(err){
+      var m='Lokasi gagal diambil. ';
+      if(err&&err.code===1)m+='Izinkan akses lokasi untuk situs ini (Setelan browser/HP → Lokasi).';
+      else if(err&&err.code===3)m+='GPS terlalu lama merespons. Coba lagi di area terbuka.';
+      else m+='Aktifkan GPS/lokasi lalu coba lagi.';
+      rej(new Error(m));
+    },
+    {enableHighAccuracy:true,timeout:20000,maximumAge:0}
+  );
+})}
+/* Picker dibuka LANGSUNG pada tap: iOS memblokir file picker yang dibuka
+   setelah await karena rantai user-gesture-nya hilang. */
+function getSelfie(){return new Promise(function(res,rej){
+  var inp=$('#selfieInput');inp.value='';
+  inp.onchange=function(){
+    var f=inp.files&&inp.files[0];if(!f)return rej(new Error('Selfie dibatalkan.'));
+    var rd=new FileReader();
+    rd.onload=function(){
+      compressImage(String(rd.result)).then(function(dataUrl){
+        res({base64:String(dataUrl).split(',')[1],mime:'image/jpeg',filename:'selfie.jpg'});
+      },function(){rej(new Error('Gagal memproses foto.'))});
+    };
+    rd.onerror=function(){rej(new Error('Gagal membaca foto. Coba pilih foto lain.'))};
+    rd.readAsDataURL(f);
+  };
+  inp.click();
+})}
+/* Foto kamera HP bisa 4–12 MB; backend membatasi 6 MB. Kecilkan ke maks
+   1440 px / JPEG 0.82 supaya upload cepat dan tidak kena limit. */
+function compressImage(dataUrl){return new Promise(function(res){
+  try{
+    var img=new Image();
+    img.onload=function(){
+      try{
+        var max=1440,w=img.naturalWidth||img.width,h=img.naturalHeight||img.height;
+        var sc=Math.min(1,max/Math.max(w,h));
+        var cw=Math.max(1,Math.round(w*sc)),ch=Math.max(1,Math.round(h*sc));
+        var cv=document.createElement('canvas');cv.width=cw;cv.height=ch;
+        var cx=cv.getContext('2d');cx.fillStyle='#fff';cx.fillRect(0,0,cw,ch);cx.drawImage(img,0,0,cw,ch);
+        var out=cv.toDataURL('image/jpeg',0.82);
+        res(out&&out.length<dataUrl.length?out:dataUrl);
+      }catch(e){res(dataUrl)}
+    };
+    img.onerror=function(){res(dataUrl)};
+    img.src=dataUrl;
+  }catch(e){res(dataUrl)}
+})}
 function doCheck(kind){
-  toast('Mengambil GPS…');
-  getPos().then(function(pos){toast('Ambil selfie…');return getSelfie().then(function(selfie){return{pos:pos,selfie:selfie}})})
-    .then(function(d){
-      var data={latitude:d.pos.latitude,longitude:d.pos.longitude,selfie:d.selfie,device:'PWA'};
-      return api(kind==='in'?'POST /attendance/check-in':'POST /attendance/check-out',data);
-    })
-    .then(function(){toast(kind==='in'?'Check In berhasil ✅':'Check Out berhasil ✅','good');RENDER.att()})
-    .catch(function(e){toast(e.message,'bad')});
+  if(S.busyCheck)return;
+  S.busyCheck=true;
+  toast('Menyiapkan selfie & GPS…');
+  var selfieP=getSelfie();
+  var posP=getPos();
+  Promise.all([posP,selfieP]).then(function(r){
+    toast('Mengirim absensi…');
+    return api(kind==='in'?'POST /attendance/check-in':'POST /attendance/check-out',
+      {latitude:r[0].latitude,longitude:r[0].longitude,selfie:r[1],device:'PWA'});
+  }).then(function(){
+    toast(kind==='in'?'Check In berhasil ✅':'Check Out berhasil ✅','good',4000);RENDER.att();
+  }).catch(function(e){toast(e.message,'bad',6000)})
+    .then(function(){S.busyCheck=false});
 }
 
 /* ---------- LEAVE ---------- */
@@ -319,18 +374,18 @@ RENDER.profile=function(){
   var u=S.user;
   var h='<div class="card"><div style="display:flex;gap:14px;align-items:center"><div class="logo" style="margin:0">'+esc((u.name||'U').charAt(0).toUpperCase())+'</div><div><b style="font-size:16px">'+esc(u.name)+'</b><div class="muted small">'+esc(u.email)+'</div><div style="margin-top:6px">'+badge(u.role==='employee'?'active':u.role)+'</div></div></div><div class="grid2" style="margin-top:14px"><div class="stat"><div class="l">Departemen</div><div class="v" style="font-size:14px">'+esc(u.department||'—')+'</div></div><div class="stat"><div class="l">Posisi</div><div class="v" style="font-size:14px">'+esc(u.position||'—')+'</div></div></div></div>';
   h+='<div class="card"><h3>Akun</h3><div class="list"><div class="item"><div class="t"><b>Ganti password</b><span>Perbarui kata sandi kamu</span></div><button class="btn sm ghost" onclick="pwForm()">Ubah</button></div><div class="item"><div class="t"><b>Install aplikasi</b><span>Tambahkan ke layar utama</span></div><button class="btn sm gold" onclick="showInstall()">Install</button></div><div class="item"><div class="t"><b>Keluar</b><span>Akhiri sesi di perangkat ini</span></div><button class="btn sm danger" onclick="logout()">Keluar</button></div></div></div>';
-  h+='<p class="muted small" style="text-align:center;margin:2px 0 10px">MoneyTrack PWA · build 6</p>';
+  h+='<p class="muted small" style="text-align:center;margin:2px 0 10px">MoneyTrack PWA · build 7 · Cloudflare Worker + D1</p>';
   $('#view').innerHTML=h;
 };
 function pwForm(){openSheet('<h3>Ganti password</h3><div class="field"><label>Password saat ini</label><input id="pCur" type="password"></div><div class="field"><label>Password baru (min. 8)</label><input id="pNew" type="password"></div><div class="err" id="pErr"></div><div class="actions"><button class="btn ghost" onclick="closeSheet()">Batal</button><button class="btn" id="pSave">Simpan</button></div>');$('#pSave').onclick=function(){api('PUT /profile/password',{current_password:$('#pCur').value,password:$('#pNew').value}).then(function(){closeSheet();toast('Password diperbarui.','good')}).catch(function(e){$('#pErr').textContent=e.message})}}
 
 /* ---------- ADMIN ---------- */
-S.f.admin={sub:'dash'};
+S.f.admin={sub:'dash',txType:'',attDate:''};
 RENDER.admin=function(){
-  var subs=[['dash','Ringkasan'],['users','Pengguna'],['leave','Izin'],['loc','Lokasi'],['reports','Laporan']];
+  var subs=[['dash','Ringkasan'],['users','Pengguna'],['tx','Transaksi'],['att','Absensi'],['leave','Izin'],['loc','Lokasi'],['reports','Laporan']];
   var h='<div class="seg">'+subs.map(function(x){return '<button class="'+(S.f.admin.sub===x[0]?'on':'')+'" onclick="S.f.admin.sub=\''+x[0]+'\';RENDER.admin()">'+x[1]+'</button>'}).join('')+'</div><div id="adminBox"><div class="spin"></div></div>';
   $('#view').innerHTML=h;
-  ({dash:adminDash,users:adminUsers,leave:adminLeave,loc:adminLoc,reports:adminReports})[S.f.admin.sub]();
+  ({dash:adminDash,users:adminUsers,tx:adminTx,att:adminAtt,leave:adminLeave,loc:adminLoc,reports:adminReports})[S.f.admin.sub]();
 };
 function adminDash(){var sub=S.f.admin.sub;api('GET /admin/dashboard').then(function(d){if(S.tab!=='admin'||S.f.admin.sub!==sub)return;var i=d.item;$('#adminBox').innerHTML='<div class="grid2"><div class="stat"><div class="l">Pengguna</div><div class="v dom">'+i.total_users+'</div></div><div class="stat"><div class="l">Aktif</div><div class="v green">'+i.active_users+'</div></div><div class="stat"><div class="l">Hadir hari ini</div><div class="v green">'+i.present_today+'</div></div><div class="stat"><div class="l">Terlambat</div><div class="v amber">'+i.late_today+'</div></div><div class="stat"><div class="l">Belum absen</div><div class="v red">'+i.absent_today+'</div></div><div class="stat"><div class="l">Izin pending</div><div class="v amber">'+i.pending_leaves+'</div></div></div>'}).catch(failFor('admin',sub))}
 function adminUsers(){var sub=S.f.admin.sub;api('GET /admin/users',{per_page:50}).then(function(d){if(S.tab!=='admin'||S.f.admin.sub!==sub)return;$('#adminBox').innerHTML='<div class="card"><h3>Pengguna <button class="btn sm gold" onclick="userForm()">+ Tambah</button></h3><div class="list">'+d.items.map(function(u){return '<div class="item"><div class="ic" style="background:#e3eef7">'+esc(u.name.charAt(0).toUpperCase())+'</div><div class="t"><b>'+esc(u.name)+'</b><span>'+esc(u.email)+' · '+esc(u.role)+'</span></div><div style="display:flex;gap:6px"><button class="btn sm ghost" onclick="resetPw('+u.id+')">PW</button><button class="btn sm danger" onclick="delUser('+u.id+',\''+esc(u.name)+'\')">✕</button></div></div>'}).join('')+'</div></div>'}).catch(failFor('admin',sub))}
@@ -340,7 +395,35 @@ function delUser(id,name){confirmSheet('Hapus pengguna','Hapus "'+name+'"?','Hap
 function adminLeave(){var sub=S.f.admin.sub;api('GET /admin/leave',{per_page:50}).then(function(d){if(S.tab!=='admin'||S.f.admin.sub!==sub)return;$('#adminBox').innerHTML='<div class="card"><h3>Pengajuan izin</h3><div class="list">'+(d.items.map(function(l){var act=l.status==='pending'?'<div style="display:flex;gap:6px"><button class="btn sm" onclick="apprLeave('+l.id+')">✓</button><button class="btn sm danger" onclick="rejLeave('+l.id+')">✕</button></div>':'';return '<div class="item"><div class="t"><b>'+esc(l.user_name)+' · '+esc(l.type)+'</b><span>'+fdate(l.start_date)+' → '+fdate(l.end_date)+' · '+esc(l.reason)+'</span></div><div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end">'+badge(l.status)+act+'</div></div>'}).join('')||'<div class="empty">Tidak ada pengajuan.</div>')+'</div></div>'}).catch(failFor('admin',sub))}
 function apprLeave(id){confirmSheet('Setujui izin','Setujui pengajuan ini?','Setujui',function(){api('POST /admin/leave/'+id+'/approve',{}).then(function(){toast('Disetujui.','good');RENDER.admin()}).catch(function(e){toast(e.message,'bad')})})}
 function rejLeave(id){openSheet('<h3>Tolak izin</h3><div class="field"><label>Catatan (wajib)</label><textarea id="rNote" rows="3"></textarea></div><div class="err" id="rErr2"></div><div class="actions"><button class="btn ghost" onclick="closeSheet()">Batal</button><button class="btn danger" id="rSave2">Tolak</button></div>');$('#rSave2').onclick=function(){api('POST /admin/leave/'+id+'/reject',{note:$('#rNote').value.trim()}).then(function(){closeSheet();toast('Ditolak.','good');RENDER.admin()}).catch(function(e){$('#rErr2').textContent=e.message})}}
-function adminReports(){var sub=S.f.admin.sub;api('GET /admin/reports',{}).then(function(d){if(S.tab!=='admin'||S.f.admin.sub!==sub)return;var i=d.item,c=i.attendance.counts;$('#adminBox').innerHTML='<div class="grid2"><div class="stat"><div class="l">Pemasukan</div><div class="v green">'+rp(i.financial.total_income)+'</div></div><div class="stat"><div class="l">Pengeluaran</div><div class="v red">'+rp(i.financial.total_expense)+'</div></div><div class="stat"><div class="l">Hadir</div><div class="v green">'+c.present+'</div></div><div class="stat"><div class="l">Terlambat</div><div class="v amber">'+c.late+'</div></div><div class="stat"><div class="l">Izin</div><div class="v dom">'+c.permission+'</div></div><div class="stat"><div class="l">Sakit</div><div class="v dom">'+c.sick+'</div></div></div>'}).catch(failFor('admin',sub))}
+function adminTx(){var sub=S.f.admin.sub;
+  Promise.all([api('GET /admin/transactions/summary',{}),api('GET /admin/transactions',{per_page:50,type:S.f.admin.txType})]).then(function(r){
+    if(S.tab!=='admin'||S.f.admin.sub!==sub)return;
+    var s=r[0],items=r[1].items;
+    var h='<div class="grid2"><div class="stat"><div class="l">Pemasukan</div><div class="v green">'+rp(s.total_income)+'</div></div><div class="stat"><div class="l">Pengeluaran</div><div class="v red">'+rp(s.total_expense)+'</div></div></div>';
+    h+='<div class="card" style="margin-top:14px"><h3>Transaksi semua pengguna</h3><div class="seg"><button class="'+(S.f.admin.txType===''?'on':'')+'" onclick="S.f.admin.txType=\'\';adminTx()">Semua</button><button class="'+(S.f.admin.txType==='income'?'on':'')+'" onclick="S.f.admin.txType=\'income\';adminTx()">Masuk</button><button class="'+(S.f.admin.txType==='expense'?'on':'')+'" onclick="S.f.admin.txType=\'expense\';adminTx()">Keluar</button></div>';
+    h+='<div class="list">'+(items.map(function(t){var inc=t.type==='income';return '<div class="item"><div class="ic" style="background:'+(inc?'#e5f4ea':'#fbe9e7')+'">'+(inc?'⬇':'⬆')+'</div><div class="t"><b>'+esc(t.title)+'</b><span>'+fdate(t.date)+' · '+esc(t.user_name||'')+' · '+esc(t.category?t.category.name:'Umum')+'</span></div><div class="amt" style="color:'+(inc?'var(--green)':'var(--red)')+'">'+(inc?'+':'-')+rp(t.amount).replace('Rp ','')+'</div></div>'}).join('')||'<div class="empty">Belum ada transaksi.</div>')+'</div></div>';
+    $('#adminBox').innerHTML=h;
+  }).catch(failFor('admin',sub))}
+function adminAtt(){var sub=S.f.admin.sub;
+  api('GET /admin/attendances',{per_page:50,date:S.f.admin.attDate||''}).then(function(d){
+    if(S.tab!=='admin'||S.f.admin.sub!==sub)return;
+    var h='<div class="card"><h3>Absensi semua pengguna</h3><div style="display:flex;gap:8px;margin-bottom:12px"><input id="attDate" type="date" value="'+esc(S.f.admin.attDate||'')+'" style="flex:1;border:1.5px solid var(--line);border-radius:12px;padding:9px 11px;background:#fff"><button class="btn sm ghost" onclick="S.f.admin.attDate=\'\';adminAtt()">Reset</button></div>';
+    h+='<div class="list">'+(d.items.map(function(a){return '<div class="item"><div class="ic" style="background:#e3eef7">📍</div><div class="t"><b>'+esc(a.user_name||'')+'</b><span>'+fdate(a.date)+' · '+(a.check_in_time||'—')+' → '+(a.check_out_time||'—')+' · '+esc(a.office_location||'')+'</span></div>'+badge(a.status)+'</div>'}).join('')||'<div class="empty">Belum ada absensi.</div>')+'</div></div>';
+    $('#adminBox').innerHTML=h;
+    $('#attDate').onchange=function(){S.f.admin.attDate=this.value;adminAtt()};
+  }).catch(failFor('admin',sub))}
+function adminReports(){var sub=S.f.admin.sub;api('GET /admin/reports',{}).then(function(d){
+  if(S.tab!=='admin'||S.f.admin.sub!==sub)return;
+  var i=d.item,c=i.attendance.counts;
+  var h='<div class="grid2"><div class="stat"><div class="l">Pemasukan</div><div class="v green">'+rp(i.financial.total_income)+'</div></div><div class="stat"><div class="l">Pengeluaran</div><div class="v red">'+rp(i.financial.total_expense)+'</div></div><div class="stat"><div class="l">Hadir</div><div class="v green">'+c.present+'</div></div><div class="stat"><div class="l">Terlambat</div><div class="v amber">'+c.late+'</div></div><div class="stat"><div class="l">Izin</div><div class="v dom">'+c.permission+'</div></div><div class="stat"><div class="l">Sakit</div><div class="v dom">'+c.sick+'</div></div></div>';
+  h+='<div class="card" style="margin-top:14px"><h3>Backup data</h3><p class="muted small" style="margin-bottom:12px">Unduh seluruh isi D1 (pengguna, transaksi, absensi, izin, lokasi) sebagai file JSON.</p><button class="btn block" onclick="backupJson()">⬇ Unduh Backup JSON</button></div>';
+  $('#adminBox').innerHTML=h;
+}).catch(failFor('admin',sub))}
+function backupJson(){toast('Mengambil backup…');api('GET /admin/export',{}).then(function(d){
+  var blob=new Blob([JSON.stringify(d,null,2)],{type:'application/json'});
+  var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='moneytrack-backup-'+new Date().toISOString().slice(0,10)+'.json';document.body.appendChild(a);a.click();
+  setTimeout(function(){URL.revokeObjectURL(a.href);a.remove()},1500);toast('Backup diunduh.','good',4000);
+}).catch(function(e){toast(e.message,'bad',6000)})}
 
 /* ---------- ADMIN: office locations ---------- */
 function jb(v){return v===true||v==='true'||v==='TRUE'||v===1||v==='1'}
@@ -398,9 +481,12 @@ function showInstall(){
 $('#installBtn').onclick=showInstall;
 
 /* ---------- boot ---------- */
-(function(){var t=read('mt_pwa_token');if(!t)return showAuth();S.token=t;api('GET /profile').then(function(d){S.user=d.user;enterApp()}).catch(function(){S.token=null;drop('mt_pwa_token');showAuth()})})();
+(function(){var t=read('mt_pwa_token');if(!t)return showAuth();S.token=t;api('GET /profile').then(function(d){
+  if(!isSuperAdmin(d.user)){S.token=null;drop('mt_pwa_token');showAuth();$('#aErr').textContent='Sesi ini bukan Super Admin. Masuk dengan akun Super Admin.';return}
+  S.user=d.user;enterApp()
+}).catch(function(){S.token=null;drop('mt_pwa_token');showAuth()})})();
 if('serviceWorker' in navigator){window.addEventListener('load',function(){
-  navigator.serviceWorker.register('sw.js?v=6').then(function(reg){
+  navigator.serviceWorker.register('sw.js?v=7').then(function(reg){
     reg.update(); // force-check now, don't wait for the browser's cached update check
     setInterval(function(){reg.update()},300000);
   }).catch(function(){});
