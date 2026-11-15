@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0b3d33">
+<meta name="description" content="MoneyTrack & Attendance — lacak uang dan absensi GPS dari iPhone maupun Android. Install sebagai aplikasi (PWA).">
+<title>MoneyTrack — Uang & Absensi</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/svg+xml" href="icons/icon.svg">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="MoneyTrack">
+<style>
+:root{
+  --dom:#0b3d33; --dom2:#0e5748; --dom3:#12705c;
+  --gold:#e8b13c; --gold2:#f5c563;
+  --paper:#f6f4ee; --card:#ffffff; --ink:#12241d; --muted:#5c6f66; --line:#e3e0d6;
+  --green:#188a52; --red:#d2453b; --amber:#c07f16; --blue:#22699c;
+  --safe-b:env(safe-area-inset-bottom,0px); --safe-t:env(safe-area-inset-top,0px);
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html{scroll-behavior:smooth}
+body{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,Helvetica,Arial,sans-serif;background:var(--paper);color:var(--ink);font-size:15px;line-height:1.45}
+button{font:inherit;cursor:pointer;border:none;background:none;color:inherit}
+input,select,textarea{font:inherit;color:var(--ink)}
+.hidden{display:none!important}
+::-webkit-scrollbar{width:9px;height:9px}
+::-webkit-scrollbar-track{background:var(--paper)}
+::-webkit-scrollbar-thumb{background:var(--dom3);border-radius:8px;border:2px solid var(--paper)}
+::-webkit-scrollbar-thumb:hover{background:var(--gold)}
+
+/* ---------- auth ---------- */
+#auth{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;
+  background:radial-gradient(120% 90% at 85% -10%, #12705c 0%, transparent 55%),radial-gradient(90% 70% at -10% 110%, #0e5748 0%, transparent 60%),linear-gradient(160deg,#0b3d33,#0a2c26 70%,#081f1b)}
+.auth-card{width:100%;max-width:410px;background:var(--card);border-radius:22px;padding:32px 26px;box-shadow:0 30px 70px rgba(0,0,0,.45);animation:pop .5s cubic-bezier(.2,.9,.3,1.2)}
+@keyframes pop{from{opacity:0;transform:translateY(18px) scale(.97)}to{opacity:1;transform:none}}
+.logo{width:56px;height:56px;border-radius:16px;background:linear-gradient(140deg,var(--dom3),var(--dom));display:flex;align-items:center;justify-content:center;color:var(--gold2);font-weight:800;font-size:26px;box-shadow:0 8px 20px rgba(11,61,51,.35);margin-bottom:16px}
+.auth-card h1{font-size:22px;letter-spacing:-.02em}
+.auth-card .tag{color:var(--muted);margin:4px 0 20px}
+.tabs{display:flex;background:var(--paper);border-radius:12px;padding:4px;margin-bottom:18px}
+.tabs button{flex:1;padding:9px;border-radius:9px;font-weight:600;color:var(--muted)}
+.tabs button.on{background:var(--dom);color:#fff;box-shadow:0 4px 12px rgba(11,61,51,.3)}
+.field{margin-bottom:13px}
+.field label{display:block;font-size:12.5px;font-weight:700;color:var(--muted);margin-bottom:5px;letter-spacing:.02em}
+.field input,.field select,.field textarea{width:100%;border:1.5px solid var(--line);border-radius:12px;padding:11px 13px;background:#fff;outline:none;transition:border .15s,box-shadow .15s}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--dom3);box-shadow:0 0 0 4px rgba(18,112,92,.12)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border-radius:13px;padding:12px 18px;font-weight:700;background:linear-gradient(140deg,var(--dom3),var(--dom));color:#fff;box-shadow:0 6px 16px rgba(11,61,51,.28);transition:transform .12s,filter .15s}
+.btn:active{transform:scale(.97)}
+.btn:disabled{opacity:.6}
+.btn.gold{background:linear-gradient(140deg,var(--gold2),var(--gold));color:#3c2a05;box-shadow:0 6px 16px rgba(232,177,60,.35)}
+.btn.ghost{background:#fff;color:var(--ink);border:1.5px solid var(--line);box-shadow:none}
+.btn.danger{background:var(--red);box-shadow:none}
+.btn.block{width:100%}
+.btn.sm{padding:7px 12px;font-size:13px;border-radius:10px}
+.err{color:var(--red);font-size:13px;margin-top:10px;min-height:18px}
+
+/* ---------- shell ---------- */
+#app{min-height:100vh;padding-bottom:calc(76px + var(--safe-b))}
+header{position:sticky;top:0;z-index:20;color:#fff;padding:calc(14px + var(--safe-t)) 18px 46px;
+  background:radial-gradient(120% 120% at 90% -20%, #12705c 0%, transparent 55%),linear-gradient(150deg,var(--dom2),var(--dom) 70%)}
+header .row{display:flex;align-items:center;justify-content:space-between;gap:10px}
+header .hi{font-size:13px;color:#bcd9cf}
+header .name{font-size:19px;font-weight:800;letter-spacing:-.01em}
+header .acts{display:flex;gap:8px}
+.iconbtn{width:38px;height:38px;border-radius:12px;background:rgba(255,255,255,.14);display:flex;align-items:center;justify-content:center;font-size:17px;backdrop-filter:blur(6px)}
+.iconbtn:active{transform:scale(.94)}
+main{max-width:640px;margin:-30px auto 0;padding:0 16px;position:relative;z-index:5}
+.card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:16px;box-shadow:0 8px 24px rgba(18,36,29,.07);margin-bottom:14px;animation:rise .4s ease both}
+@keyframes rise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+.card h3{font-size:14px;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between}
+.muted{color:var(--muted)} .small{font-size:12.5px}
+.balance{font-size:30px;font-weight:800;letter-spacing:-.02em}
+.pillrow{display:flex;gap:10px;margin-top:12px}
+.pill{flex:1;border-radius:13px;padding:10px 12px;font-size:12px;font-weight:700}
+.pill .v{display:block;font-size:15px;margin-top:2px}
+.pill.in{background:#e5f4ea;color:var(--green)} .pill.out{background:#fbe9e7;color:var(--red)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.stat{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:13px}
+.stat .l{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+.stat .v{font-size:21px;font-weight:800;margin-top:3px}
+.v.green{color:var(--green)}.v.red{color:var(--red)}.v.amber{color:var(--amber)}.v.gold{color:var(--amber)}.v.dom{color:var(--dom3)}
+.list{display:flex;flex-direction:column}
+.item{display:flex;align-items:center;gap:12px;padding:11px 2px;border-bottom:1px solid var(--line)}
+.item:last-child{border-bottom:none}
+.item .ic{width:40px;height:40px;border-radius:12px;flex:none;display:flex;align-items:center;justify-content:center;font-size:17px}
+.item .t{flex:1;min-width:0}
+.item .t b{display:block;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.item .t span{font-size:12px;color:var(--muted)}
+.item .amt{font-weight:800;font-size:14px;white-space:nowrap}
+.badge{display:inline-block;padding:3px 9px;border-radius:999px;font-size:11px;font-weight:800}
+.b-green{background:#e5f4ea;color:var(--green)}.b-red{background:#fbe9e7;color:var(--red)}.b-amber{background:#fdf3dd;color:var(--amber)}.b-blue{background:#e3eef7;color:var(--blue)}.b-gray{background:#eceae2;color:var(--muted)}
+.empty{padding:26px;text-align:center;color:var(--muted);font-size:13.5px}
+.spin{width:26px;height:26px;border:3px solid var(--line);border-top-color:var(--dom3);border-radius:50%;animation:sp 1s linear infinite;margin:26px auto}
+@keyframes sp{to{transform:rotate(360deg)}}
+
+/* bottom nav */
+nav{position:fixed;left:0;right:0;bottom:0;z-index:30;display:flex;justify-content:space-around;gap:2px;
+  padding:8px 6px calc(8px + var(--safe-b));background:rgba(255,255,255,.92);backdrop-filter:blur(14px);border-top:1px solid var(--line)}
+nav button{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 2px;border-radius:12px;color:var(--muted);font-size:10.5px;font-weight:700}
+nav button .n{font-size:19px;line-height:1}
+nav button.on{color:var(--dom)}
+nav button.on .n{background:linear-gradient(140deg,var(--gold2),var(--gold));color:#3c2a05;width:40px;height:26px;border-radius:999px;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 10px rgba(232,177,60,.4)}
+
+/* modal / toast */
+#overlay{position:fixed;inset:0;z-index:60;background:rgba(8,31,27,.55);backdrop-filter:blur(3px);display:flex;align-items:flex-end;justify-content:center}
+.sheet{background:#fff;width:100%;max-width:640px;border-radius:22px 22px 0 0;padding:20px 18px calc(20px + var(--safe-b));max-height:88vh;overflow-y:auto;animation:up .3s cubic-bezier(.2,.9,.3,1)}
+@keyframes up{from{transform:translateY(60px);opacity:.4}to{transform:none;opacity:1}}
+@media(min-width:640px){#overlay{align-items:center}.sheet{border-radius:22px;margin:16px}}
+.sheet h3{font-size:16px;margin-bottom:14px}
+.sheet .actions{display:flex;gap:10px;justify-content:flex-end;margin-top:16px}
+#toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(90px + var(--safe-b));z-index:99;background:var(--ink);color:#fff;padding:11px 18px;border-radius:999px;font-weight:700;font-size:13.5px;box-shadow:0 12px 30px rgba(0,0,0,.3);max-width:92vw;text-align:center}
+#toast.good{background:var(--green)}#toast.bad{background:var(--red)}
+.seg{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
+.seg button{padding:7px 12px;border-radius:999px;background:#fff;border:1.5px solid var(--line);font-size:12.5px;font-weight:700;color:var(--muted)}
+.seg button.on{background:var(--dom);border-color:var(--dom);color:#fff}
+.install-banner{display:flex;align-items:center;gap:10px;background:linear-gradient(140deg,var(--gold2),var(--gold));color:#3c2a05;border-radius:16px;padding:12px 14px;margin-bottom:14px;font-weight:700;font-size:13px}
+.install-banner button{margin-left:auto;background:#3c2a05;color:var(--gold2);border-radius:10px;padding:7px 12px;font-weight:800;font-size:12px}
+</style>
+</head>
+<body>
+
+<div id="auth">
+  <div class="auth-card">
+    <div class="logo">M</div>
+    <h1>MoneyTrack</h1>
+    <p class="tag">Uang & absensi dalam satu genggaman.</p>
+    <div class="tabs"><button id="tabLogin" class="on">Masuk</button><button id="tabReg">Daftar</button></div>
+    <div id="regName" class="field hidden"><label>Nama lengkap</label><input id="aName" placeholder="Nama kamu"></div>
+    <div class="field"><label>Email</label><input id="aEmail" type="email" autocomplete="username" placeholder="nama@perusahaan.com"></div>
+    <div class="field"><label>Password</label><input id="aPass" type="password" autocomplete="current-password" placeholder="Minimal 8 karakter"></div>
+    <button class="btn block" id="aGo">Masuk</button>
+    <div class="err" id="aErr"></div>
+  </div>
+</div>
+
+<div id="app" class="hidden">
+  <header>
+    <div class="row">
+      <div><div class="hi" id="hGreet">Halo 👋</div><div class="name" id="hName">—</div></div>
+      <div class="acts">
+        <button class="iconbtn" id="installBtn" title="Install aplikasi">⤓</button>
+        <button class="iconbtn" id="refreshBtn" title="Muat ulang">⟳</button>
+      </div>
+    </div>
+  </header>
+  <main><div id="installBanner"></div><div id="view"></div></main>
+  <nav id="nav"></nav>
+</div>
+
+<div id="overlay" class="hidden"><div class="sheet" id="sheet"></div></div>
+<div id="toast" class="hidden"></div>
+<input type="file" id="selfieInput" accept="image/*" capture="user" class="hidden">
+
+<script>
+'use strict';
+var EXEC='https://script.google.com/macros/s/AKfycbwPZEDSBusoU4SkeGQcvdnwCsAY0Bry1DSdJzFwddJi9pc2GQ_1FfyhxdABf16YJNd8/exec';
+var S={token:null,user:null,tab:'home',mode:'login',f:{}};
+function $(s){return document.querySelector(s)}
+function esc(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+function rp(n){var x=Math.round(Number(n)||0);var neg=x<0;return (neg?'-Rp ':'Rp ')+Math.abs(x).toString().replace(/\B(?=(\d{3})+(?!\d))/g,'.')}
+function fdate(v){if(!v)return '—';var s=String(v).slice(0,10).split('-');return s.length===3?s[2]+'/'+s[1]+'/'+s[0]:String(v)}
+function toast(m,k){var t=$('#toast');t.textContent=m;t.className=k||'';clearTimeout(t._h);t._h=setTimeout(function(){t.className='hidden'},3000)}
+function store(k,v){try{localStorage.setItem(k,v)}catch(e){}}
+function read(k){try{return localStorage.getItem(k)}catch(e){return null}}
+function drop(k){try{localStorage.removeItem(k)}catch(e){}}
+
+function api(action,data,token){
+  return fetch(EXEC,{method:'POST',headers:{'Content-Type':'text/plain;charset=UTF-8'},body:JSON.stringify({action:action,data:data||{},token:token===undefined?(S.token||''):token})})
+    .then(function(r){return r.json()})
+    .then(function(b){
+      if(b&&b.success)return b.data;
+      var m=(b&&b.message)||'Permintaan gagal.';
+      if(b&&b.errors){var k=Object.keys(b.errors)[0];if(k)m+=' ('+b.errors[k][0]+')'}
+      throw new Error(m);
+    });
+}
+function badge(st){var m={present:['b-green','Hadir'],late:['b-amber','Terlambat'],absent:['b-red','Absen'],permission:['b-blue','Izin'],sick:['b-blue','Sakit'],holiday:['b-gray','Libur'],pending:['b-amber','Pending'],approved:['b-green','Disetujui'],rejected:['b-red','Ditolak'],cancelled:['b-gray','Batal'],income:['b-green','Masuk'],expense:['b-red','Keluar']};var x=m[st]||['b-gray',esc(st)];return '<span class="badge '+x[0]+'">'+x[1]+'</span>'}
+
+/* ---------- modal ---------- */
+function openSheet(html){$('#sheet').innerHTML=html;$('#overlay').classList.remove('hidden')}
+function closeSheet(){$('#overlay').classList.add('hidden');$('#sheet').innerHTML=''}
+$('#overlay').addEventListener('click',function(e){if(e.target===this)closeSheet()});
+function confirmSheet(title,msg,yes,fn){openSheet('<h3>'+esc(title)+'</h3><p class="muted">'+esc(msg)+'</p><div class="actions"><button class="btn ghost" onclick="closeSheet()">Batal</button><button class="btn danger" id="cfYes">'+esc(yes)+'</button></div>');$('#cfYes').onclick=function(){closeSheet();fn()}}
+
+/* ---------- auth ---------- */
+function setMode(m){S.mode=m;$('#tabLogin').classList.toggle('on',m==='login');$('#tabReg').classList.toggle('on',m==='reg');$('#regName').classList.toggle('hidden',m==='login');$('#aGo').textContent=m==='login'?'Masuk':'Daftar'}
+$('#tabLogin').onclick=function(){setMode('login')};$('#tabReg').onclick=function(){setMode('reg')};
+$('#aGo').onclick=function(){
+  var email=$('#aEmail').value.trim(),pass=$('#aPass').value;$('#aErr').textContent='';
+  if(!email||!pass){$('#aErr').textContent='Email & password wajib diisi.';return}
+  $('#aGo').disabled=true;
+  var act=S.mode==='login'?'POST /auth/login':'POST /auth/register';
+  var data={email:email,password:pass};if(S.mode==='reg')data.name=$('#aName').value.trim();
+  api(act,data,'').then(function(d){S.token=d.token;S.user=d.user;store('mt_pwa_token',d.token);enterApp();toast('Selamat datang, '+d.user.name,'good')})
+    .catch(function(e){$('#aErr').textContent=e.message})
+    .then(function(){$('#aGo').disabled=false});
+};
+$('#aPass').addEventListener('keydown',function(e){if(e.key==='Enter')$('#aGo').click()});
+function showAuth(){$('#app').classList.add('hidden');$('#auth').classList.remove('hidden')}
+function enterApp(){$('#auth').classList.add('hidden');$('#app').classList.remove('hidden');buildNav();setTab('home');maybeInstallBanner()}
+function logout(){api('POST /auth/logout',{}).catch(function(){});S.token=null;S.user=null;drop('mt_pwa_token');showAuth()}
+
+/* ---------- nav / router ---------- */
+function isAdmin(){return S.user&&['admin','super_admin'].indexOf(S.user.role)>=0}
+var TABS=[['home','🏠','Home'],['money','💰','Uang'],['att','📍','Absen'],['leave','🗓','Izin'],['profile','👤','Profil']];
+function buildNav(){var t=TABS.slice();if(isAdmin())t.push(['admin','🛠','Admin']);$('#nav').innerHTML=t.map(function(x){return '<button data-t="'+x[0]+'"><span class="n">'+x[1]+'</span>'+x[2]+'</button>'}).join('');document.querySelectorAll('#nav button').forEach(function(b){b.onclick=function(){setTab(b.dataset.t)}})}
+function setTab(t){S.tab=t;document.querySelectorAll('#nav button').forEach(function(b){b.classList.toggle('on',b.dataset.t===t)});var g=new Date().getHours();$('#hGreet').textContent=(g<11?'Selamat pagi ':g<15?'Selamat siang 🌤':g<18?'Selamat sore 🌇':'Selamat malam 🌙');$('#hName').textContent=S.user.name;RENDER[t]()}
+$('#refreshBtn').onclick=function(){RENDER[S.tab]()};
+var RENDER={};
+function loading(){$('#view').innerHTML='<div class="spin"></div>'}
+function failView(e){if(/Unauthenticated/i.test(e.message)){drop('mt_pwa_token');showAuth();toast('Sesi berakhir.','bad');return}$('#view').innerHTML='<div class="card"><div class="empty">'+esc(e.message)+'</div></div>'}
+
+/* ---------- HOME ---------- */
+RENDER.home=function(){loading();
+  Promise.all([api('GET /transactions/summary'),api('GET /attendance/today'),api('GET /transactions',{per_page:5})]).then(function(r){
+    var s=r[0],a=r[1].item,tx=r[2].items;
+    var h='<div class="card"><div class="muted small">Saldo kamu</div><div class="balance">'+rp(s.balance)+'</div><div class="pillrow"><div class="pill in">Pemasukan<span class="v">'+rp(s.total_income)+'</span></div><div class="pill out">Pengeluaran<span class="v">'+rp(s.total_expense)+'</span></div></div></div>';
+    h+='<div class="card"><h3>Absensi hari ini '+badge(a?a.status:'absent')+'</h3>';
+    if(a&&a.check_in_at){h+='<div class="grid2"><div class="stat"><div class="l">Masuk</div><div class="v dom">'+(a.check_in_time||'—')+'</div></div><div class="stat"><div class="l">Pulang</div><div class="v dom">'+(a.check_out_time||'—')+'</div></div></div>';}
+    else{h+='<p class="muted small">Kamu belum check in hari ini.</p>';}
+    h+='<div style="margin-top:12px"><button class="btn gold block" onclick="setTab(\'att\')">'+(a&&a.check_in_at&&!a.check_out_at?'Check Out sekarang':'Buka Absensi')+'</button></div></div>';
+    h+='<div class="card"><h3>Transaksi terbaru <button class="btn sm ghost" onclick="setTab(\'money\')">Semua</button></h3><div class="list">'+(tx.map(txItem).join('')||'<div class="empty">Belum ada transaksi.</div>')+'</div></div>';
+    $('#view').innerHTML=h;
+  }).catch(failView)};
+function txItem(t){var inc=t.type==='income';return '<div class="item"><div class="ic" style="background:'+(inc?'#e5f4ea':'#fbe9e7')+'">'+(inc?'⬇':'⬆')+'</div><div class="t"><b>'+esc(t.title)+'</b><span>'+fdate(t.date)+' · '+esc(t.category?t.category.name:'Umum')+'</span></div><div class="amt" style="color:'+(inc?'var(--green)':'var(--red)')+'">'+(inc?'+':'-')+rp(t.amount).replace('Rp ','')+'</div></div>'}
+
+/* ---------- MONEY ---------- */
+S.f.money={type:''};
+RENDER.money=function(){loading();
+  Promise.all([api('GET /transactions/summary'),api('GET /transactions',{per_page:50,type:S.f.money.type})]).then(function(r){
+    var s=r[0],items=r[1].items;
+    var h='<div class="grid2" style="margin-bottom:14px"><div class="stat"><div class="l">Pemasukan</div><div class="v green">'+rp(s.total_income)+'</div></div><div class="stat"><div class="l">Pengeluaran</div><div class="v red">'+rp(s.total_expense)+'</div></div></div>';
+    h+='<div class="card"><h3>Transaksi <button class="btn sm gold" onclick="txForm()">+ Tambah</button></h3><div class="seg"><button class="'+(S.f.money.type===''?'on':'')+'" onclick="S.f.money.type=\'\';RENDER.money()">Semua</button><button class="'+(S.f.money.type==='income'?'on':'')+'" onclick="S.f.money.type=\'income\';RENDER.money()">Masuk</button><button class="'+(S.f.money.type==='expense'?'on':'')+'" onclick="S.f.money.type=\'expense\';RENDER.money()">Keluar</button></div><div class="list">'+(items.map(function(t){return txItem(t)+'<div style="margin:-6px 0 6px 52px"><button class="btn sm ghost" onclick="delTx(\''+t.id+'\')">Hapus</button></div>'}).join('')||'<div class="empty">Belum ada transaksi.</div>')+'</div></div>';
+    $('#view').innerHTML=h;
+  }).catch(failView)};
+function delTx(id){confirmSheet('Hapus transaksi','Yakin hapus transaksi ini?','Hapus',function(){api('DELETE /transactions/'+id).then(function(){toast('Transaksi dihapus.','good');RENDER.money()}).catch(function(e){toast(e.message,'bad')})})}
+function txForm(){
+  api('GET /categories').then(function(c){
+    var opts=c.items.map(function(x){return '<option value="'+x.id+'">'+esc(x.name)+' ('+x.type+')</option>'}).join('');
+    openSheet('<h3>Tambah transaksi</h3><div class="field"><label>Tipe</label><select id="tType"><option value="expense">Pengeluaran</option><option value="income">Pemasukan</option></select></div><div class="field"><label>Judul</label><input id="tTitle" placeholder="cth: Makan siang"></div><div class="field"><label>Jumlah (Rp)</label><input id="tAmt" type="number" inputmode="numeric" min="1" placeholder="25000"></div><div class="field"><label>Tanggal</label><input id="tDate" type="date" value="'+new Date().toISOString().slice(0,10)+'"></div><div class="field"><label>Kategori</label><select id="tCat"><option value="">Umum</option>'+opts+'</select></div><div class="err" id="tErr"></div><div class="actions"><button class="btn ghost" onclick="closeSheet()">Batal</button><button class="btn" id="tSave">Simpan</button></div>');
+    $('#tSave').onclick=function(){
+      var d={type:$('#tType').value,title:$('#tTitle').value.trim(),amount:Number($('#tAmt').value),date:$('#tDate').value,category_id:$('#tCat').value};
+      $('#tSave').disabled=true;
+      api('POST /transactions',d).then(function(){closeSheet();toast('Transaksi disimpan.','good');RENDER.money()}).catch(function(e){$('#tErr').textContent=e.message;$('#tSave').disabled=false});
+    };
+  }).catch(function(e){toast(e.message,'bad')});
+}
+
+/* ---------- ATTENDANCE ---------- */
+RENDER.att=function(){loading();
+  Promise.all([api('GET /attendance/today'),api('GET /attendance/history',{per_page:15})]).then(function(r){
+    var a=r[0].item,hist=r[1].items;
+    var h='<div class="card"><h3>Hari ini '+badge(a?a.status:'absent')+'</h3>';
+    if(a&&a.check_in_at){h+='<div class="grid2"><div class="stat"><div class="l">Check in</div><div class="v dom">'+(a.check_in_time||'—')+'</div></div><div class="stat"><div class="l">Check out</div><div class="v dom">'+(a.check_out_time||'—')+'</div></div></div>'+(a.work_hours?'<p class="muted small" style="margin-top:8px">Jam kerja: '+a.work_hours+'</p>':'');}
+    else h+='<p class="muted small">Ambil selfie + GPS untuk absen.</p>';
+    h+='<div class="pillrow" style="margin-top:12px">';
+    if(!a||!a.check_in_at)h+='<button class="btn gold" style="flex:1" onclick="doCheck(\'in\')">📍 Check In</button>';
+    if(a&&a.check_in_at&&!a.check_out_at)h+='<button class="btn" style="flex:1" onclick="doCheck(\'out\')">🏁 Check Out</button>';
+    if(a&&a.check_out_at)h+='<p class="muted small">Selesai untuk hari ini. Terima kasih!</p>';
+    h+='</div></div>';
+    h+='<div class="card"><h3>Riwayat</h3><div class="list">'+(hist.map(function(x){return '<div class="item"><div class="ic" style="background:#e3eef7">📍</div><div class="t"><b>'+fdate(x.date)+'</b><span>'+esc(x.office_location||'')+' · '+(x.check_in_time||'—')+' → '+(x.check_out_time||'—')+'</span></div>'+badge(x.status)+'</div>'}).join('')||'<div class="empty">Belum ada riwayat.</div>')+'</div></div>';
+    $('#view').innerHTML=h;
+  }).catch(failView)};
+function getPos(){return new Promise(function(res,rej){if(!navigator.geolocation)return rej(new Error('GPS tidak tersedia.'));navigator.geolocation.getCurrentPosition(function(p){res({latitude:p.coords.latitude,longitude:p.coords.longitude})},function(){rej(new Error('Izin GPS ditolak. Aktifkan lokasi.'))},{enableHighAccuracy:true,timeout:15000})})}
+function getSelfie(){return new Promise(function(res,rej){var inp=$('#selfieInput');inp.value='';inp.onchange=function(){var f=inp.files[0];if(!f)return rej(new Error('Selfie dibatalkan.'));var rd=new FileReader();rd.onload=function(){var s=String(rd.result);res({base64:s.split(',')[1],mime:f.type||'image/jpeg',filename:f.name||'selfie.jpg'})};rd.onerror=function(){rej(new Error('Gagal membaca foto.'))};rd.readAsDataURL(f)};inp.click()})}
+function doCheck(kind){
+  toast('Mengambil GPS…');
+  getPos().then(function(pos){toast('Ambil selfie…');return getSelfie().then(function(selfie){return{pos:pos,selfie:selfie}})})
+    .then(function(d){
+      var data={latitude:d.pos.latitude,longitude:d.pos.longitude,selfie:d.selfie,device:'PWA'};
+      return api(kind==='in'?'POST /attendance/check-in':'POST /attendance/check-out',data);
+    })
+    .then(function(){toast(kind==='in'?'Check In berhasil ✅':'Check Out berhasil ✅','good');RENDER.att()})
+    .catch(function(e){toast(e.message,'bad')});
+}
+
+/* ---------- LEAVE ---------- */
+RENDER.leave=function(){loading();
+  api('GET /leave',{per_page:30}).then(function(d){
+    var h='<div class="card"><h3>Pengajuan izin / cuti <button class="btn sm gold" onclick="leaveForm()">+ Ajukan</button></h3><div class="list">'+(d.items.map(function(l){
+      var act=l.status==='pending'?'<button class="btn sm ghost" onclick="cancelLeave('+l.id+')">Batalkan</button>':'';
+      return '<div class="item"><div class="ic" style="background:#fdf3dd">🗓</div><div class="t"><b>'+esc(l.type)+' · '+l.total_days+' hari</b><span>'+fdate(l.start_date)+' → '+fdate(l.end_date)+' · '+esc(l.reason)+'</span></div><div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end">'+badge(l.status)+act+'</div></div>';
+    }).join('')||'<div class="empty">Belum ada pengajuan.</div>')+'</div></div>';
+    $('#view').innerHTML=h;
+  }).catch(failView)};
+function cancelLeave(id){confirmSheet('Batalkan pengajuan','Batalkan pengajuan pending ini?','Batalkan',function(){api('PUT /leave/'+id+'/cancel').then(function(){toast('Dibatalkan.','good');RENDER.leave()}).catch(function(e){toast(e.message,'bad')})})}
+function leaveForm(){
+  openSheet('<h3>Ajukan izin / cuti</h3><div class="field"><label>Tipe</label><select id="lType"><option value="izin">Izin</option><option value="sakit">Sakit</option><option value="cuti">Cuti</option></select></div><div class="field"><label>Mulai</label><input id="lStart" type="date" value="'+new Date().toISOString().slice(0,10)+'"></div><div class="field"><label>Selesai</label><input id="lEnd" type="date" value="'+new Date().toISOString().slice(0,10)+'"></div><div class="field"><label>Alasan</label><textarea id="lReason" rows="3" placeholder="Tulis alasan…"></textarea></div><div class="err" id="lErr"></div><div class="actions"><button class="btn ghost" onclick="closeSheet()">Batal</button><button class="btn" id="lSave">Kirim</button></div>');
+  $('#lSave').onclick=function(){
+    var d={type:$('#lType').value,start_date:$('#lStart').value,end_date:$('#lEnd').value,reason:$('#lReason').value.trim()};
+    $('#lSave').disabled=true;
+    api('POST /leave',d).then(function(){closeSheet();toast('Pengajuan terkirim.','good');RENDER.leave()}).catch(function(e){$('#lErr').textContent=e.message;$('#lSave').disabled=false});
+  };
+}
+
+/* ---------- PROFILE ---------- */
+RENDER.profile=function(){
+  var u=S.user;
+  var h='<div class="card"><div style="display:flex;gap:14px;align-items:center"><div class="logo" style="margin:0">'+esc((u.name||'U').charAt(0).toUpperCase())+'</div><div><b style="font-size:16px">'+esc(u.name)+'</b><div class="muted small">'+esc(u.email)+'</div><div style="margin-top:6px">'+badge(u.role==='employee'?'active':u.role)+'</div></div></div><div class="grid2" style="margin-top:14px"><div class="stat"><div class="l">Departemen</div><div class="v" style="font-size:14px">'+esc(u.department||'—')+'</div></div><div class="stat"><div class="l">Posisi</div><div class="v" style="font-size:14px">'+esc(u.position||'—')+'</div></div></div></div>';
+  h+='<div class="card"><h3>Akun</h3><div class="list"><div class="item"><div class="t"><b>Ganti password</b><span>Perbarui kata sandi kamu</span></div><button class="btn sm ghost" onclick="pwForm()">Ubah</button></div><div class="item"><div class="t"><b>Install aplikasi</b><span>Tambahkan ke layar utama</span></div><button class="btn sm gold" onclick="showInstall()">Install</button></div><div class="item"><div class="t"><b>Keluar</b><span>Akhiri sesi di perangkat ini</span></div><button class="btn sm danger" onclick="logout()">Keluar</button></div></div></div>';
+  $('#view').innerHTML=h;
+};
+function pwForm(){openSheet('<h3>Ganti password</h3><div class="field"><label>Password saat ini</label><input id="pCur" type="password"></div><div class="field"><label>Password baru (min. 8)</label><input id="pNew" type="password"></div><div class="err" id="pErr"></div><div class="actions"><button class="btn ghost" onclick="closeSheet()">Batal</button><button class="btn" id="pSave">Simpan</button></div>');$('#pSave').onclick=function(){api('PUT /profile/password',{current_password:$('#pCur').value,password:$('#pNew').value}).then(function(){closeSheet();toast('Password diperbarui.','good')}).catch(function(e){$('#pErr').textContent=e.message})}}
+
+/* ---------- ADMIN ---------- */
+S.f.admin={sub:'dash'};
+RENDER.admin=function(){
+  var subs=[['dash','Ringkasan'],['users','Pengguna'],['leave','Izin'],['reports','Laporan']];
+  var h='<div class="seg">'+subs.map(function(x){return '<button class="'+(S.f.admin.sub===x[0]?'on':'')+'" onclick="S.f.admin.sub=\''+x[0]+'\';RENDER.admin()">'+x[1]+'</button>'}).join('')+'</div><div id="adminBox"><div class="spin"></div></div>';
+  $('#view').innerHTML=h;
+  ({dash:adminDash,users:adminUsers,leave:adminLeave,reports:adminReports})[S.f.admin.sub]();
+};
+function adminDash(){api('GET /admin/dashboard').then(function(d){var i=d.item;$('#adminBox').innerHTML='<div class="grid2"><div class="stat"><div class="l">Pengguna</div><div class="v dom">'+i.total_users+'</div></div><div class="stat"><div class="l">Aktif</div><div class="v green">'+i.active_users+'</div></div><div class="stat"><div class="l">Hadir hari ini</div><div class="v green">'+i.present_today+'</div></div><div class="stat"><div class="l">Terlambat</div><div class="v amber">'+i.late_today+'</div></div><div class="stat"><div class="l">Belum absen</div><div class="v red">'+i.absent_today+'</div></div><div class="stat"><div class="l">Izin pending</div><div class="v amber">'+i.pending_leaves+'</div></div></div>'}).catch(failView)}
+function adminUsers(){api('GET /admin/users',{per_page:50}).then(function(d){$('#adminBox').innerHTML='<div class="card"><h3>Pengguna <button class="btn sm gold" onclick="userForm()">+ Tambah</button></h3><div class="list">'+d.items.map(function(u){return '<div class="item"><div class="ic" style="background:#e3eef7">'+esc(u.name.charAt(0).toUpperCase())+'</div><div class="t"><b>'+esc(u.name)+'</b><span>'+esc(u.email)+' · '+esc(u.role)+'</span></div><div style="display:flex;gap:6px"><button class="btn sm ghost" onclick="resetPw('+u.id+')">PW</button><button class="btn sm danger" onclick="delUser('+u.id+',\''+esc(u.name)+'\')">✕</button></div></div>'}).join('')+'</div></div>'}).catch(failView)}
+function userForm(){openSheet('<h3>Tambah pengguna</h3><div class="field"><label>Nama</label><input id="uName"></div><div class="field"><label>Email</label><input id="uEmail" type="email"></div><div class="field"><label>Password (min. 8)</label><input id="uPass" type="password"></div><div class="field"><label>Role</label><select id="uRole"><option value="employee">employee</option><option value="admin">admin</option></select></div><div class="err" id="uErr"></div><div class="actions"><button class="btn ghost" onclick="closeSheet()">Batal</button><button class="btn" id="uSave">Simpan</button></div>');$('#uSave').onclick=function(){api('POST /admin/users',{name:$('#uName').value.trim(),email:$('#uEmail').value.trim(),password:$('#uPass').value,role:$('#uRole').value}).then(function(){closeSheet();toast('Pengguna dibuat.','good');RENDER.admin()}).catch(function(e){$('#uErr').textContent=e.message})}}
+function resetPw(id){openSheet('<h3>Reset password</h3><div class="field"><label>Password baru</label><input id="rPass" type="password"></div><div class="err" id="rErr"></div><div class="actions"><button class="btn ghost" onclick="closeSheet()">Batal</button><button class="btn" id="rSave">Reset</button></div>');$('#rSave').onclick=function(){api('POST /admin/users/'+id+'/reset-password',{password:$('#rPass').value}).then(function(){closeSheet();toast('Password direset.','good')}).catch(function(e){$('#rErr').textContent=e.message})}}
+function delUser(id,name){confirmSheet('Hapus pengguna','Hapus "'+name+'"?','Hapus',function(){api('DELETE /admin/users/'+id).then(function(){toast('Dihapus.','good');RENDER.admin()}).catch(function(e){toast(e.message,'bad')})})}
+function adminLeave(){api('GET /admin/leave',{per_page:50}).then(function(d){$('#adminBox').innerHTML='<div class="card"><h3>Pengajuan izin</h3><div class="list">'+(d.items.map(function(l){var act=l.status==='pending'?'<div style="display:flex;gap:6px"><button class="btn sm" onclick="apprLeave('+l.id+')">✓</button><button class="btn sm danger" onclick="rejLeave('+l.id+')">✕</button></div>':'';return '<div class="item"><div class="t"><b>'+esc(l.user_name)+' · '+esc(l.type)+'</b><span>'+fdate(l.start_date)+' → '+fdate(l.end_date)+' · '+esc(l.reason)+'</span></div><div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end">'+badge(l.status)+act+'</div></div>'}).join('')||'<div class="empty">Tidak ada pengajuan.</div>')+'</div></div>'}).catch(failView)}
+function apprLeave(id){confirmSheet('Setujui izin','Setujui pengajuan ini?','Setujui',function(){api('POST /admin/leave/'+id+'/approve',{}).then(function(){toast('Disetujui.','good');RENDER.admin()}).catch(function(e){toast(e.message,'bad')})})}
+function rejLeave(id){openSheet('<h3>Tolak izin</h3><div class="field"><label>Catatan (wajib)</label><textarea id="rNote" rows="3"></textarea></div><div class="err" id="rErr2"></div><div class="actions"><button class="btn ghost" onclick="closeSheet()">Batal</button><button class="btn danger" id="rSave2">Tolak</button></div>');$('#rSave2').onclick=function(){api('POST /admin/leave/'+id+'/reject',{note:$('#rNote').value.trim()}).then(function(){closeSheet();toast('Ditolak.','good');RENDER.admin()}).catch(function(e){$('#rErr2').textContent=e.message})}}
+function adminReports(){api('GET /admin/reports',{}).then(function(d){var i=d.item,c=i.attendance.counts;$('#adminBox').innerHTML='<div class="grid2"><div class="stat"><div class="l">Pemasukan</div><div class="v green">'+rp(i.financial.total_income)+'</div></div><div class="stat"><div class="l">Pengeluaran</div><div class="v red">'+rp(i.financial.total_expense)+'</div></div><div class="stat"><div class="l">Hadir</div><div class="v green">'+c.present+'</div></div><div class="stat"><div class="l">Terlambat</div><div class="v amber">'+c.late+'</div></div><div class="stat"><div class="l">Izin</div><div class="v dom">'+c.permission+'</div></div><div class="stat"><div class="l">Sakit</div><div class="v dom">'+c.sick+'</div></div></div>'}).catch(failView)}
+
+/* ---------- PWA install ---------- */
+var deferredPrompt=null;
+window.addEventListener('beforeinstallprompt',function(e){e.preventDefault();deferredPrompt=e;maybeInstallBanner()});
+function isIOS(){return /iphone|ipad|ipod/i.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1)}
+function isStandalone(){return window.matchMedia('(display-mode: standalone)').matches||navigator.standalone}
+function maybeInstallBanner(){if(isStandalone()){$('#installBanner').innerHTML='';return}
+  $('#installBanner').innerHTML='<div class="install-banner">📲 Jadikan aplikasi di HP kamu <button onclick="showInstall()">Install</button></div>';}
+function showInstall(){
+  if(deferredPrompt){deferredPrompt.prompt();deferredPrompt.userChoice.then(function(){deferredPrompt=null;maybeInstallBanner()});return}
+  if(isIOS()){openSheet('<h3>Install di iPhone / iPad</h3><p class="muted" style="margin-bottom:12px">1. Tap tombol <b>Share</b> (kotak dengan panah ke atas) di Safari.<br>2. Pilih <b>"Add to Home Screen"</b> / <b>"Tambah ke Layar Utama"</b>.<br>3. Tap <b>Add</b>. MoneyTrack muncul sebagai aplikasi.</p><div class="actions"><button class="btn" onclick="closeSheet()">Mengerti</button></div>');return}
+  openSheet('<h3>Install aplikasi</h3><p class="muted">Buka menu browser (⋮) lalu pilih <b>"Install app"</b> / <b>"Add to Home screen"</b>.</p><div class="actions"><button class="btn" onclick="closeSheet()">Mengerti</button></div>');
+}
+$('#installBtn').onclick=showInstall;
+
+/* ---------- boot ---------- */
+(function(){var t=read('mt_pwa_token');if(!t)return showAuth();S.token=t;api('GET /profile').then(function(d){S.user=d.user;enterApp()}).catch(function(){S.token=null;drop('mt_pwa_token');showAuth()})})();
+if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('sw.js').catch(function(){})})}
+</script>
+</body>
+</html>
