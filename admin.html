@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MoneyTrack — Admin Backend</title>
+<style>
+  :root{
+    --bg:#f1f5f9; --card:#ffffff; --ink:#0f172a; --muted:#64748b; --line:#e2e8f0;
+    --accent:#4f46e5; --accent-soft:#eef2ff; --green:#16a34a; --red:#dc2626; --amber:#d97706;
+    --side:#0f172a; --side-ink:#cbd5e1;
+  }
+  *{box-sizing:border-box; margin:0; padding:0}
+  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif; background:var(--bg); color:var(--ink); font-size:14px}
+  button{font:inherit; cursor:pointer}
+  a{color:var(--accent)}
+  input,select,textarea{font:inherit; color:var(--ink)}
+  .hidden{display:none !important}
+
+  /* ---------- Login ---------- */
+  #loginView{min-height:100vh; display:flex; align-items:center; justify-content:center; padding:24px;
+    background:linear-gradient(135deg,#0f172a 0%,#1e293b 60%,#312e81 100%)}
+  .login-card{background:var(--card); border-radius:16px; padding:36px 32px; width:100%; max-width:400px; box-shadow:0 25px 60px rgba(0,0,0,.35)}
+  .login-logo{width:48px;height:48px;border-radius:12px;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:20px;margin-bottom:16px}
+  .login-card h1{font-size:20px;margin-bottom:4px}
+  .login-card p{color:var(--muted);margin-bottom:22px}
+  .field{margin-bottom:14px}
+  .field label{display:block;font-weight:600;margin-bottom:6px;font-size:13px}
+  .field input,.field select,.field textarea{width:100%;border:1px solid var(--line);border-radius:8px;padding:10px 12px;background:#fff;outline:none}
+  .field input:focus,.field select:focus,.field textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+  .btn{border:none;border-radius:8px;padding:10px 16px;font-weight:600;background:var(--accent);color:#fff}
+  .btn:hover{filter:brightness(1.1)}
+  .btn:disabled{opacity:.6;cursor:default}
+  .btn-block{width:100%}
+  .btn-ghost{background:#fff;color:var(--ink);border:1px solid var(--line)}
+  .btn-danger{background:var(--red)}
+  .btn-sm{padding:6px 10px;font-size:12px;border-radius:6px}
+  .err{color:var(--red);font-size:13px;margin-top:10px;min-height:18px}
+
+  /* ---------- Layout ---------- */
+  #appView{display:flex;min-height:100vh}
+  aside{width:230px;background:var(--side);color:var(--side-ink);display:flex;flex-direction:column;position:fixed;top:0;bottom:0;left:0;z-index:5}
+  .brand{display:flex;align-items:center;gap:10px;padding:20px 18px;color:#fff;font-weight:700;font-size:15px}
+  .brand .login-logo{width:34px;height:34px;font-size:15px;margin:0;border-radius:9px}
+  nav{flex:1;padding:6px 10px;overflow-y:auto}
+  nav button{display:flex;width:100%;align-items:center;gap:10px;background:none;border:none;color:var(--side-ink);padding:10px 12px;border-radius:8px;margin-bottom:2px;text-align:left;font-weight:500}
+  nav button:hover{background:#1e293b;color:#fff}
+  nav button.active{background:var(--accent);color:#fff}
+  .side-foot{padding:14px 16px;border-top:1px solid #1e293b;font-size:12px}
+  .side-foot .uname{color:#fff;font-weight:600;font-size:13px}
+  .side-foot .urole{color:var(--muted);margin:2px 0 10px}
+  main{flex:1;margin-left:230px;padding:24px 28px;max-width:1200px}
+  .topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;gap:12px;flex-wrap:wrap}
+  .topbar h2{font-size:20px}
+  .topbar .sub{color:var(--muted);font-size:13px;margin-top:2px}
+
+  /* ---------- Components ---------- */
+  .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:14px;margin-bottom:20px}
+  .stat{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px}
+  .stat .lbl{color:var(--muted);font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.03em}
+  .stat .val{font-size:24px;font-weight:800;margin-top:6px}
+  .stat .val.green{color:var(--green)} .stat .val.red{color:var(--red)} .stat .val.amber{color:var(--amber)} .stat .val.accent{color:var(--accent)}
+  .panel{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:18px;margin-bottom:20px}
+  .panel h3{font-size:15px;margin-bottom:14px}
+  .toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:14px}
+  .toolbar input,.toolbar select{border:1px solid var(--line);border-radius:8px;padding:8px 10px;background:#fff}
+  .toolbar .spacer{flex:1}
+  table{width:100%;border-collapse:collapse;background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+  th{background:#f8fafc;text-align:left;font-size:12px;text-transform:uppercase;letter-spacing:.03em;color:var(--muted);padding:10px 12px;border-bottom:1px solid var(--line)}
+  td{padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+  tr:last-child td{border-bottom:none}
+  tbody tr:hover{background:#f8fafc}
+  .table-wrap{overflow-x:auto;border-radius:12px}
+  .badge{display:inline-block;padding:3px 9px;border-radius:999px;font-size:11px;font-weight:700}
+  .b-green{background:#dcfce7;color:#166534} .b-red{background:#fee2e2;color:#991b1b}
+  .b-amber{background:#fef3c7;color:#92400e} .b-blue{background:#dbeafe;color:#1e40af}
+  .b-gray{background:#e2e8f0;color:#334155} .b-indigo{background:var(--accent-soft);color:#3730a3}
+  .pager{display:flex;align-items:center;gap:10px;margin-top:14px;color:var(--muted);font-size:13px}
+  .muted{color:var(--muted)} .right{text-align:right}
+  .row-actions{display:flex;gap:6px;flex-wrap:wrap}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+  .spin{width:26px;height:26px;border:3px solid var(--line);border-top-color:var(--accent);border-radius:50%;animation:sp 1s linear infinite;margin:40px auto}
+  @keyframes sp{to{transform:rotate(360deg)}}
+  .empty{padding:36px;text-align:center;color:var(--muted)}
+
+  /* ---------- Modal & toast ---------- */
+  #modalOverlay{position:fixed;inset:0;background:rgba(15,23,42,.55);display:flex;align-items:center;justify-content:center;padding:20px;z-index:50}
+  .modal{background:#fff;border-radius:14px;padding:24px;width:100%;max-width:480px;max-height:90vh;overflow-y:auto;box-shadow:0 25px 60px rgba(0,0,0,.3)}
+  .modal h3{margin-bottom:16px;font-size:16px}
+  .modal .actions{display:flex;justify-content:flex-end;gap:10px;margin-top:18px}
+  #toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;padding:12px 20px;border-radius:10px;font-weight:600;z-index:99;box-shadow:0 10px 30px rgba(0,0,0,.3);max-width:90vw}
+  #toast.bad{background:var(--red)} #toast.good{background:var(--green)}
+
+  @media (max-width:900px){
+    aside{position:static;width:100%;height:auto;flex-direction:row;align-items:center}
+    #appView{flex-direction:column}
+    nav{display:flex;overflow-x:auto;padding:8px}
+    nav button{width:auto;white-space:nowrap}
+    .brand{padding:12px}
+    .side-foot{display:none}
+    main{margin-left:0;padding:16px}
+    .grid2{grid-template-columns:1fr}
+  }
+</style>
+</head>
+<body>
+
+<div id="loginView">
+  <div class="login-card">
+    <div class="login-logo">M</div>
+    <h1>MoneyTrack Admin</h1>
+    <p>Backend web — masuk dengan akun admin.</p>
+    <div class="field"><label>Email</label><input id="loginEmail" type="email" autocomplete="username" placeholder="admin@perusahaan.com"></div>
+    <div class="field"><label>Password</label><input id="loginPass" type="password" autocomplete="current-password" placeholder="••••••••"></div>
+    <button class="btn btn-block" id="loginBtn">Masuk</button>
+    <div class="err" id="loginErr"></div>
+  </div>
+</div>
+
+<div id="appView" class="hidden">
+  <aside>
+    <div class="brand"><div class="login-logo">M</div>MoneyTrack Admin</div>
+    <nav id="nav">
+      <button data-view="dashboard" class="active">Dashboard</button>
+      <button data-view="users">Pengguna</button>
+      <button data-view="transactions">Transaksi</button>
+      <button data-view="attendance">Absensi</button>
+      <button data-view="locations">Lokasi Kantor</button>
+      <button data-view="leave">Izin / Cuti</button>
+      <button data-view="org">Organisasi</button>
+      <button data-view="reports">Laporan</button>
+    </nav>
+    <div class="side-foot">
+      <div class="uname" id="sideName"></div>
+      <div class="urole" id="sideRole"></div>
+      <button class="btn btn-ghost btn-sm" id="logoutBtn">Keluar</button>
+    </div>
+  </aside>
+  <main>
+    <div class="topbar">
+      <div><h2 id="viewTitle">Dashboard</h2><div class="sub" id="viewSub"></div></div>
+    </div>
+    <div id="content"></div>
+  </main>
+</div>
+
+<div id="modalOverlay" class="hidden"><div class="modal" id="modalBox"></div></div>
+<div id="toast" class="hidden"></div>
+
+<script>window.MT_API_BASE='https://moneytrack-api.malvinaszo008.workers.dev';</script>
+<script>
+'use strict';
+var S = { token: null, user: null, view: 'dashboard', f: {} };
+var $ = function (s) { return document.querySelector(s); };
+
+/* ---------- storage (sandbox-safe) ---------- */
+function store(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
+function read(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
+function drop(k) { try { localStorage.removeItem(k); } catch (e) {} }
+
+/* ---------- API bridge ---------- */
+/* Di GAS memakai google.script.run; di Worker HTML ini disuntik
+   window.MT_API_BASE sehingga request langsung ke endpoint fetch. */
+var MT_API_BASE = (typeof window !== 'undefined' && window.MT_API_BASE) || '';
+function call(action, data, token) {
+  if (MT_API_BASE) {
+    return fetch(MT_API_BASE + '/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=UTF-8' },
+      body: JSON.stringify({ action: action, data: data || {}, token: token === undefined ? (S.token || '') : token })
+    }).then(function (r) { return r.json(); }).then(function (body) {
+      if (body && body.success) return body.data;
+      var msg = (body && body.message) || 'Permintaan gagal.';
+      if (body && body.errors) {
+        var k = Object.keys(body.errors)[0];
+        if (k) msg += ' (' + body.errors[k][0] + ')';
+      }
+      throw new Error(msg);
+    });
+  }
+  return new Promise(function (resolve, reject) {
+    google.script.run
+      .withSuccessHandler(function (body) {
+        if (body && body.success) return resolve(body.data);
+        var msg = (body && body.message) || 'Permintaan gagal.';
+        if (body && body.errors) {
+          var k = Object.keys(body.errors)[0];
+          if (k) msg += ' (' + body.errors[k][0] + ')';
+        }
+        reject(new Error(msg));
+      })
+      .withFailureHandler(function (err) { reject(new Error(err && err.message ? err.message : String(err))); })
+      .adminWebCall(action, data || {}, token === undefined ? (S.token || '') : token);
+  });
+}
+
+/* ---------- utils ---------- */
+function esc(v) { return String(v == null ? '' : v).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+function rp(n) { var x = Math.round(Number(n) || 0); var neg = x < 0; return (neg ? '-Rp ' : 'Rp ') + Math.abs(x).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.'); }
+function fdate(v) { if (!v) return '—'; var s = String(v).slice(0, 10).split('-'); return s.length === 3 ? s[2] + '/' + s[1] + '/' + s[0] : String(v); }
+function ftime(v) { if (!v) return '—'; var d = new Date(v); if (isNaN(d)) return '—'; return ('0' + d.getHours()).slice(-2) + ':' + ('0' + d.getMinutes()).slice(-2); }
+function badge(st) {
+  var m = { present: ['b-green', 'Hadir'], late: ['b-amber', 'Terlambat'], absent: ['b-red', 'Absen'], permission: ['b-blue', 'Izin'], sick: ['b-blue', 'Sakit'], holiday: ['b-gray', 'Libur'], pending: ['b-amber', 'Pending'], approved: ['b-green', 'Disetujui'], rejected: ['b-red', 'Ditolak'], cancelled: ['b-gray', 'Dibatalkan'], income: ['b-green', 'Masuk'], expense: ['b-red', 'Keluar'], active: ['b-green', 'Aktif'], inactive: ['b-gray', 'Nonaktif'] };
+  var x = m[st] || ['b-gray', esc(st)];
+  return '<span class="badge ' + x[0] + '">' + x[1] + '</span>';
+}
+function roleBadge(r) { var m = { super_admin: 'b-indigo', admin: 'b-blue', employee: 'b-gray' }; return '<span class="badge ' + (m[r] || 'b-gray') + '">' + esc(r) + '</span>'; }
+function toast(msg, kind) { var t = $('#toast'); t.textContent = msg; t.className = kind || ''; setTimeout(function () { t.className = 'hidden'; }, 3200); }
+function loading() { return '<div class="spin"></div>'; }
+function emptyRow(cols, msg) { return '<tr><td colspan="' + cols + '"><div class="empty">' + esc(msg || 'Belum ada data.') + '</div></td></tr>'; }
+
+/* ---------- modal ---------- */
+function openModal(html) { $('#modalBox').innerHTML = html; $('#modalOverlay').classList.remove('hidden'); }
+function closeModal() { $('#modalOverlay').classList.add('hidden'); $('#modalBox').innerHTML = ''; }
+$('#modalOverlay').addEventListener('click', function (e) { if (e.target === this) closeModal(); });
+function confirmModal(title, msg, yesLabel, onYes) {
+  openModal('<h3>' + esc(title) + '</h3><p class="muted">' + esc(msg) + '</p><div class="actions"><button class="btn btn-ghost" onclick="closeModal()">Batal</button><button class="btn btn-danger" id="cfYes">' + esc(yesLabel) + '</button></div>');
+  $('#cfYes').onclick = function () { closeModal(); onYes(); };
+}
+
+/* ---------- pager ---------- */
+function pager(meta, key) {
+  if (!meta) return '';
+  return '<div class="pager"><button class="btn btn-ghost btn-sm" ' + (meta.current_page <= 1 ? 'disabled' : '') + ' onclick="pageTo(\'' + key + '\',' + (meta.current_page - 1) + ')">‹ Prev</button>' +
+    '<span>Hal ' + meta.current_page + ' / ' + meta.last_page + ' · ' + meta.total + ' data</span>' +
+    '<button class="btn btn-ghost btn-sm" ' + (meta.current_page >= meta.last_page ? 'disabled' : '') + ' onclick="pageTo(\'' + key + '\',' + (meta.current_page + 1) + ')">Next ›</button></div>';
+}
+function pageTo(key, p) { S.f[key].page = p; RENDER[S.view](); }
+
+/* ---------- auth ---------- */
+function showLogin() { $('#appView').classList.add('hidden'); $('#loginView').classList.remove('hidden'); }
+function enterApp() {
+  $('#loginView').classList.add('hidden'); $('#appView').classList.remove('hidden');
+  $('#sideName').textContent = S.user.name; $('#sideRole').textContent = S.user.role;
+  showView('dashboard');
+}
+$('#loginBtn').onclick = function () {
+  var email = $('#loginEmail').value.trim(), pass = $('#loginPass').value;
+  $('#loginErr').textContent = '';
+  if (!email || !pass) { $('#loginErr').textContent = 'Email dan password wajib diisi.'; return; }
+  $('#loginBtn').disabled = true; $('#loginBtn').textContent = 'Memeriksa…';
+  call('POST /auth/login', { email: email, password: pass }, '').then(function (d) {
+    if (['admin', 'super_admin'].indexOf(d.user.role) < 0) throw new Error('Akun ini bukan admin.');
+    S.token = d.token; S.user = d.user; store('mt_admin_token', d.token);
+    enterApp(); toast('Selamat datang, ' + d.user.name, 'good');
+  }).catch(function (e) { $('#loginErr').textContent = e.message; })
+    .then(function () { $('#loginBtn').disabled = false; $('#loginBtn').textContent = 'Masuk'; });
+};
+$('#loginPass').addEventListener('keydown', function (e) { if (e.key === 'Enter') $('#loginBtn').click(); });
+$('#logoutBtn').onclick = function () {
+  call('POST /auth/logout', {}).catch(function () {});
+  S.token = null; S.user = null; drop('mt_admin_token'); showLogin();
+};
+
+/* ---------- router ---------- */
+var TITLES = { dashboard: ['Dashboard', 'Ringkasan perusahaan hari ini'], users: ['Pengguna', 'Kelola akun karyawan & admin'], transactions: ['Transaksi', 'Seluruh transaksi perusahaan'], attendance: ['Absensi', 'Monitoring kehadiran karyawan'], locations: ['Lokasi Kantor', 'Titik GPS check-in/out & radius absensi per kantor'], leave: ['Izin / Cuti', 'Persetujuan pengajuan karyawan'], org: ['Organisasi', 'Departemen dan posisi'], reports: ['Laporan', 'Rekap keuangan & absensi bulanan'] };
+function showView(v) {
+  S.view = v;
+  document.querySelectorAll('#nav button').forEach(function (b) { b.classList.toggle('active', b.dataset.view === v); });
+  $('#viewTitle').textContent = TITLES[v][0]; $('#viewSub').textContent = TITLES[v][1];
+  RENDER[v]();
+}
+document.querySelectorAll('#nav button').forEach(function (b) { b.onclick = function () { showView(b.dataset.view); }; });
+
+var RENDER = {};
+
+/* ================= DASHBOARD ================= */
+RENDER.dashboard = function () {
+  $('#content').innerHTML = loading();
+  Promise.all([call('GET /admin/dashboard'), call('GET /admin/reports', {})]).then(function (r) {
+    var d = r[0].item, rep = r[1].item;
+    var h = '<div class="cards">' +
+      stat('Total Pengguna', d.total_users, 'accent') + stat('Pengguna Aktif', d.active_users, '') +
+      stat('Hadir Hari Ini', d.present_today, 'green') + stat('Terlambat', d.late_today, 'amber') +
+      stat('Belum Absen', d.absent_today, 'red') + stat('Izin Pending', d.pending_leaves, 'amber') + '</div>';
+    h += '<div class="grid2"><div class="panel"><h3>Keuangan Bulan Ini</h3><div class="cards" style="margin:0">' +
+      stat('Pemasukan', rp(rep.financial.total_income), 'green') + stat('Pengeluaran', rp(rep.financial.total_expense), 'red') + stat('Selisih', rp(rep.financial.net), 'accent') + '</div></div>';
+    h += '<div class="panel"><h3>Rekap Absensi Bulan Ini</h3><div class="cards" style="margin:0">' +
+      stat('Hadir', rep.attendance.counts.present, 'green') + stat('Terlambat', rep.attendance.counts.late, 'amber') + stat('Izin', rep.attendance.counts.permission, '') + stat('Sakit', rep.attendance.counts.sick, '') + '</div></div></div>';
+    h += '<div class="panel"><h3>Info</h3><p class="muted">Departemen terdaftar: <b>' + d.total_departments + '</b> · Check-in hari ini: <b>' + d.checked_in_today + '</b> · Check-out: <b>' + d.checked_out_today + '</b></p></div>';
+    $('#content').innerHTML = h;
+  }).catch(failRender);
+};
+function stat(lbl, val, color) { return '<div class="stat"><div class="lbl">' + esc(lbl) + '</div><div class="val ' + color + '">' + esc(val) + '</div></div>'; }
+function failRender(e) {
+  if (/Unauthenticated/i.test(e.message)) { drop('mt_admin_token'); showLogin(); toast('Sesi berakhir, silakan masuk lagi.', 'bad'); return; }
+  $('#content').innerHTML = '<div class="panel"><div class="empty">' + esc(e.message) + '</div></div>';
+}
+
+/* ================= USERS ================= */
+S.f.users = { page: 1, search: '', role: '' };
+RENDER.users = function () {
+  var f = S.f.users;
+  $('#content').innerHTML =
+    '<div class="toolbar"><input id="uSearch" placeholder="Cari nama / email…" value="' + esc(f.search) + '">' +
+    '<select id="uRole"><option value="">Semua role</option><option value="super_admin">super_admin</option><option value="admin">admin</option><option value="employee">employee</option></select>' +
+    '<div class="spacer"></div><button class="btn" onclick="userForm()">+ Tambah Pengguna</button></div>' +
+    '<div class="table-wrap"><table><thead><tr><th>Nama</th><th>Email</th><th>Role</th><th>Departemen</th><th>Status</th><th>Login Terakhir</th><th></th></tr></thead><tbody id="uBody"><tr><td colspan="7">' + loading() + '</td></tr></tbody></table></div><div id="uPager"></div>';
+  $('#uRole').value = f.role;
+  $('#uSearch').oninput = debounce(function () { f.search = this.value; f.page = 1; loadUsers(); }, 400);
+  $('#uRole').onchange = function () { f.role = this.value; f.page = 1; loadUsers(); };
+  loadUsers();
+};
+function loadUsers() {
+  var f = S.f.users;
+  call('GET /admin/users', { page: f.page, per_page: 10, search: f.search, role: f.role }).then(function (d) {
+    var rows = d.items.map(function (u) {
+      return '<tr><td><b>' + esc(u.name) + '</b><div class="muted">' + esc(u.employee_code || '') + '</div></td><td>' + esc(u.email) + '</td><td>' + roleBadge(u.role) + '</td><td>' + esc(u.department || '—') + '</td><td>' + badge(u.is_active ? 'active' : 'inactive') + '</td><td>' + (u.last_login_at ? fdate(u.last_login_at) + ' ' + ftime(u.last_login_at) : '—') + '</td>' +
+        '<td><div class="row-actions"><button class="btn btn-ghost btn-sm" onclick="userForm(' + u.id + ')">Edit</button><button class="btn btn-ghost btn-sm" onclick="resetPwForm(' + u.id + ')">Reset PW</button><button class="btn btn-danger btn-sm" onclick="delUser(' + u.id + ',\'' + esc(u.name) + '\')">Hapus</button></div></td></tr>';
+    }).join('');
+    $('#uBody').innerHTML = rows || emptyRow(7);
+    $('#uPager').innerHTML = pager(d.meta, 'users');
+  }).catch(failRender);
+}
+function userForm(id) {
+  var isEdit = id !== undefined;
+  var u = null;
+  var build = function () {
+    openModal('<h3>' + (isEdit ? 'Edit Pengguna' : 'Tambah Pengguna') + '</h3>' +
+      '<div class="field"><label>Nama</label><input id="mName" value="' + esc(u ? u.name : '') + '"></div>' +
+      '<div class="field"><label>Email</label><input id="mEmail" type="email" value="' + esc(u ? u.email : '') + '"></div>' +
+      (isEdit ? '' : '<div class="field"><label>Password (min. 8)</label><input id="mPass" type="password"></div>') +
+      '<div class="field"><label>Role</label><select id="mRole"><option value="employee">employee</option><option value="admin">admin</option><option value="super_admin">super_admin</option></select></div>' +
+      '<div class="field"><label>Departemen</label><input id="mDept" value="' + esc(u ? u.department || '' : '') + '"></div>' +
+      '<div class="field"><label>Posisi</label><input id="mPos" value="' + esc(u ? u.position || '' : '') + '"></div>' +
+      '<div class="field"><label>Kode Karyawan</label><input id="mCode" value="' + esc(u ? u.employee_code || '' : '') + '"></div>' +
+      (isEdit ? '<div class="field"><label><input type="checkbox" id="mActive" style="width:auto" ' + (u.is_active ? 'checked' : '') + '> Akun aktif</label></div>' : '') +
+      '<div class="err" id="mErr"></div><div class="actions"><button class="btn btn-ghost" onclick="closeModal()">Batal</button><button class="btn" id="mSave">Simpan</button></div>');
+    if (u) $('#mRole').value = u.role;
+    $('#mSave').onclick = function () {
+      var data = { name: $('#mName').value.trim(), email: $('#mEmail').value.trim(), role: $('#mRole').value, department: $('#mDept').value.trim(), position: $('#mPos').value.trim(), employee_code: $('#mCode').value.trim() };
+      if (isEdit) data.is_active = $('#mActive').checked;
+      else data.password = $('#mPass').value;
+      $('#mSave').disabled = true;
+      call(isEdit ? 'PUT /admin/users/' + id : 'POST /admin/users', data).then(function () {
+        closeModal(); toast(isEdit ? 'Pengguna diperbarui.' : 'Pengguna dibuat.', 'good'); loadUsers();
+      }).catch(function (e) { $('#mErr').textContent = e.message; $('#mSave').disabled = false; });
+    };
+  };
+  if (isEdit) call('GET /admin/users/' + id).then(function (d) { u = d.item; build(); }).catch(function (e) { toast(e.message, 'bad'); });
+  else build();
+}
+function resetPwForm(id) {
+  openModal('<h3>Reset Password</h3><div class="field"><label>Password baru (min. 8)</label><input id="mPass" type="password"></div><div class="err" id="mErr"></div><div class="actions"><button class="btn btn-ghost" onclick="closeModal()">Batal</button><button class="btn" id="mSave">Reset</button></div>');
+  $('#mSave').onclick = function () {
+    call('POST /admin/users/' + id + '/reset-password', { password: $('#mPass').value }).then(function () { closeModal(); toast('Password direset & token dicabut.', 'good'); }).catch(function (e) { $('#mErr').textContent = e.message; });
+  };
+}
+function delUser(id, name) {
+  confirmModal('Hapus Pengguna', 'Hapus akun "' + name + '"? Semua token login-nya dicabut.', 'Hapus', function () {
+    call('DELETE /admin/users/' + id).then(function () { toast('Pengguna dihapus.', 'good'); loadUsers(); }).catch(function (e) { toast(e.message, 'bad'); });
+  });
+}
+
+/* ================= TRANSACTIONS ================= */
+S.f.transactions = { page: 1, type: '', search: '', month: curMonth() };
+function curMonth() { var d = new Date(); return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2); }
+RENDER.transactions = function () {
+  var f = S.f.transactions;
+  $('#content').innerHTML =
+    '<div class="toolbar"><input type="month" id="tMonth" value="' + f.month + '"><select id="tType"><option value="">Semua tipe</option><option value="income">Pemasukan</option><option value="expense">Pengeluaran</option></select><input id="tSearch" placeholder="Cari judul…" value="' + esc(f.search) + '"></div>' +
+    '<div class="cards" id="tCards"></div><div class="table-wrap"><table><thead><tr><th>Tanggal</th><th>Pengguna</th><th>Judul</th><th>Kategori</th><th>Tipe</th><th class="right">Jumlah</th></tr></thead><tbody id="tBody"><tr><td colspan="6">' + loading() + '</td></tr></tbody></table></div><div id="tPager"></div>';
+  $('#tType').value = f.type;
+  $('#tMonth').onchange = function () { f.month = this.value; f.page = 1; loadTx(); };
+  $('#tType').onchange = function () { f.type = this.value; f.page = 1; loadTx(); };
+  $('#tSearch').oninput = debounce(function () { f.search = this.value; f.page = 1; loadTx(); }, 400);
+  loadTx();
+};
+function loadTx() {
+  var f = S.f.transactions;
+  var parts = (f.month || curMonth()).split('-');
+  var range = { start_date: f.month + '-01', end_date: f.month + '-31' };
+  Promise.all([
+    call('GET /admin/transactions/summary', { month: parts[1], year: parts[0] }),
+    call('GET /admin/transactions', Object.assign({ page: f.page, per_page: 10, type: f.type, search: f.search }, range))
+  ]).then(function (r) {
+    var s = r[0];
+    $('#tCards').innerHTML = stat('Pemasukan', rp(s.total_income), 'green') + stat('Pengeluaran', rp(s.total_expense), 'red') + stat('Selisih', rp(s.net), 'accent') + stat('Jumlah Transaksi', s.count, '');
+    var rows = r[1].items.map(function (t) {
+      return '<tr><td>' + fdate(t.date) + '</td><td>' + esc(t.user_name) + '</td><td><b>' + esc(t.title) + '</b></td><td>' + esc(t.category ? t.category.name : '—') + '</td><td>' + badge(t.type) + '</td><td class="right"><b style="color:' + (t.type === 'income' ? 'var(--green)' : 'var(--red)') + '">' + esc(t.amount_formatted) + '</b></td></tr>';
+    }).join('');
+    $('#tBody').innerHTML = rows || emptyRow(6);
+    $('#tPager').innerHTML = pager(r[1].meta, 'transactions');
+  }).catch(failRender);
+}
+
+/* ================= ATTENDANCE ================= */
+S.f.attendance = { page: 1, date: '', status: '' };
+RENDER.attendance = function () {
+  var f = S.f.attendance;
+  $('#content').innerHTML =
+    '<div class="toolbar"><input type="date" id="aDate" value="' + f.date + '"><select id="aStatus"><option value="">Semua status</option><option value="present">Hadir</option><option value="late">Terlambat</option><option value="absent">Absen</option><option value="permission">Izin</option><option value="sick">Sakit</option></select><button class="btn btn-ghost" onclick="S.f.attendance.date=\'\';S.f.attendance.page=1;RENDER.attendance()">Reset Filter</button></div>' +
+    '<div class="cards" id="aCards"></div><div class="table-wrap"><table><thead><tr><th>Tanggal</th><th>Pengguna</th><th>Status</th><th>Masuk</th><th>Pulang</th><th>Jam Kerja</th><th>Lokasi</th><th></th></tr></thead><tbody id="aBody"><tr><td colspan="8">' + loading() + '</td></tr></tbody></table></div><div id="aPager"></div>';
+  $('#aStatus').value = f.status;
+  $('#aDate').onchange = function () { f.date = this.value; f.page = 1; loadAtt(); };
+  $('#aStatus').onchange = function () { f.status = this.value; f.page = 1; loadAtt(); };
+  loadAtt();
+};
+function loadAtt() {
+  var f = S.f.attendance;
+  Promise.all([call('GET /admin/attendances/recap', {}), call('GET /admin/attendances', { page: f.page, per_page: 10, date: f.date, status: f.status })]).then(function (r) {
+    var c = r[0].counts;
+    $('#aCards').innerHTML = stat('Hadir', c.present, 'green') + stat('Terlambat', c.late, 'amber') + stat('Izin', c.permission, '') + stat('Sakit', c.sick, '') + stat('Total Bulan Ini', r[0].total, 'accent');
+    var rows = r[1].items.map(function (a) {
+      return '<tr><td>' + fdate(a.date) + '</td><td><b>' + esc(a.user_name) + '</b><div class="muted">' + esc(a.department || '') + '</div></td><td>' + badge(a.status) + '</td><td>' + (a.check_in_time || '—') + '</td><td>' + (a.check_out_time || '—') + '</td><td>' + (a.work_hours || '—') + '</td><td>' + esc(a.office_location || '—') + '</td><td><button class="btn btn-ghost btn-sm" onclick="overrideForm(' + a.id + ')">Override</button></td></tr>';
+    }).join('');
+    $('#aBody').innerHTML = rows || emptyRow(8);
+    $('#aPager').innerHTML = pager(r[1].meta, 'attendance');
+  }).catch(failRender);
+}
+function overrideForm(id) {
+  openModal('<h3>Override Absensi</h3><div class="field"><label>Status baru</label><select id="mStatus"><option value="">(tidak diubah)</option><option value="present">Hadir</option><option value="late">Terlambat</option><option value="permission">Izin</option><option value="sick">Sakit</option><option value="holiday">Libur</option></select></div><div class="field"><label>Catatan (wajib)</label><textarea id="mNotes" rows="3"></textarea></div><div class="err" id="mErr"></div><div class="actions"><button class="btn btn-ghost" onclick="closeModal()">Batal</button><button class="btn" id="mSave">Terapkan</button></div>');
+  $('#mSave').onclick = function () {
+    var data = { notes: $('#mNotes').value.trim() };
+    if ($('#mStatus').value) data.new_status = $('#mStatus').value;
+    call('POST /admin/attendance/' + id + '/override', data).then(function () { closeModal(); toast('Override diterapkan.', 'good'); loadAtt(); }).catch(function (e) { $('#mErr').textContent = e.message; });
+  };
+}
+
+/* ================= LEAVE ================= */
+S.f.leave = { page: 1, status: '' };
+RENDER.leave = function () {
+  var f = S.f.leave;
+  $('#content').innerHTML =
+    '<div class="toolbar"><select id="lStatus"><option value="">Semua status</option><option value="pending">Pending</option><option value="approved">Disetujui</option><option value="rejected">Ditolak</option><option value="cancelled">Dibatalkan</option></select></div>' +
+    '<div class="table-wrap"><table><thead><tr><th>Pengguna</th><th>Tipe</th><th>Periode</th><th>Hari</th><th>Alasan</th><th>Status</th><th></th></tr></thead><tbody id="lBody"><tr><td colspan="7">' + loading() + '</td></tr></tbody></table></div><div id="lPager"></div>';
+  $('#lStatus').value = f.status;
+  $('#lStatus').onchange = function () { f.status = this.value; f.page = 1; loadLeave(); };
+  loadLeave();
+};
+function loadLeave() {
+  var f = S.f.leave;
+  call('GET /admin/leave', { page: f.page, per_page: 10, status: f.status }).then(function (d) {
+    var rows = d.items.map(function (l) {
+      var act = l.status === 'pending' ? '<div class="row-actions"><button class="btn btn-sm" onclick="approveLeave(' + l.id + ')">Setujui</button><button class="btn btn-danger btn-sm" onclick="rejectLeave(' + l.id + ')">Tolak</button></div>' : '<span class="muted">' + esc(l.reviewer || '') + '</span>';
+      return '<tr><td><b>' + esc(l.user_name) + '</b></td><td>' + esc(l.type) + '</td><td>' + fdate(l.start_date) + ' → ' + fdate(l.end_date) + '</td><td>' + l.total_days + '</td><td>' + esc(l.reason) + '</td><td>' + badge(l.status) + '</td><td>' + act + '</td></tr>';
+    }).join('');
+    $('#lBody').innerHTML = rows || emptyRow(7);
+    $('#lPager').innerHTML = pager(d.meta, 'leave');
+  }).catch(failRender);
+}
+function approveLeave(id) {
+  confirmModal('Setujui Izin', 'Setujui pengajuan ini? Status absensi terkait ikut diperbarui.', 'Setujui', function () {
+    call('POST /admin/leave/' + id + '/approve', {}).then(function () { toast('Pengajuan disetujui.', 'good'); loadLeave(); }).catch(function (e) { toast(e.message, 'bad'); });
+  });
+}
+function rejectLeave(id) {
+  openModal('<h3>Tolak Izin</h3><div class="field"><label>Catatan penolakan (wajib)</label><textarea id="mNote" rows="3"></textarea></div><div class="err" id="mErr"></div><div class="actions"><button class="btn btn-ghost" onclick="closeModal()">Batal</button><button class="btn btn-danger" id="mSave">Tolak</button></div>');
+  $('#mSave').onclick = function () {
+    call('POST /admin/leave/' + id + '/reject', { note: $('#mNote').value.trim() }).then(function () { closeModal(); toast('Pengajuan ditolak.', 'good'); loadLeave(); }).catch(function (e) { $('#mErr').textContent = e.message; });
+  };
+}
+
+/* ================= ORG ================= */
+S.f.org = { tab: 'departments' };
+var ORG_META = {
+  departments: { title: 'Departemen', fields: [['name', 'Nama departemen']] },
+  positions: { title: 'Posisi', fields: [['name', 'Nama posisi']] }
+};
+RENDER.org = function () {
+  var tabs = Object.keys(ORG_META).map(function (k) { return '<button class="btn ' + (S.f.org.tab === k ? '' : 'btn-ghost') + ' btn-sm" onclick="S.f.org.tab=\'' + k + '\';RENDER.org()">' + ORG_META[k].title + '</button>'; }).join(' ');
+  $('#content').innerHTML = '<div class="toolbar">' + tabs + '</div><div id="orgBox">' + loading() + '</div>';
+  loadOrg();
+};
+function loadOrg() {
+  var tab = S.f.org.tab, meta = ORG_META[tab];
+  call('GET /admin/' + tab).then(function (d) {
+    var formFields = meta.fields.map(function (f) { return '<div class="field"><label>' + f[1] + '</label><input id="org_' + f[0] + '"></div>'; }).join('');
+    var rows = d.items.map(function (r) {
+      var extra = tab === 'office_locations' ? '<div class="muted">' + esc(r.address || '') + ' · ' + esc(r.latitude) + ', ' + esc(r.longitude) + ' · r=' + esc(r.radius_m) + 'm</div>' : '';
+      return '<tr><td><b>' + esc(r.name) + '</b>' + extra + '</td><td class="right"><button class="btn btn-danger btn-sm" onclick="delOrg(\'' + tab + '\',' + r.id + ',\'' + esc(r.name) + '\')">Hapus</button></td></tr>';
+    }).join('');
+    $('#orgBox').innerHTML = '<div class="grid2"><div class="panel"><h3>Tambah ' + meta.title + '</h3>' + formFields + '<div class="err" id="orgErr"></div><button class="btn" id="orgAdd">Simpan</button></div>' +
+      '<div class="table-wrap"><table><thead><tr><th>' + meta.title + ' (' + d.items.length + ')</th><th></th></tr></thead><tbody>' + (rows || emptyRow(2)) + '</tbody></table></div></div>';
+    $('#orgAdd').onclick = function () {
+      var data = {};
+      meta.fields.forEach(function (f) { data[f[0]] = $('#org_' + f[0]).value.trim(); });
+      call('POST /admin/' + tab, data).then(function () { toast(meta.title + ' ditambahkan.', 'good'); loadOrg(); }).catch(function (e) { $('#orgErr').textContent = e.message; });
+    };
+  }).catch(failRender);
+}
+function delOrg(tab, id, name) {
+  confirmModal('Hapus ' + ORG_META[tab].title, 'Hapus "' + name + '"?', 'Hapus', function () {
+    call('DELETE /admin/' + tab + '/' + id).then(function () { toast('Dihapus.', 'good'); loadOrg(); }).catch(function (e) { toast(e.message, 'bad'); });
+  });
+}
+
+/* ================= LOCATIONS ================= */
+RENDER.locations = function () {
+  $('#content').innerHTML = '<div class="toolbar"><div class="muted">Titik GPS check-in/out dan radius per kantor. Karyawan tanpa assign memakai kantor aktif pertama.</div><div class="spacer"></div><button class="btn" onclick="locForm()">+ Tambah Lokasi</button></div><div id="locBox">' + loading() + '</div>';
+  loadLocations();
+};
+function loadLocations() {
+  Promise.all([call('GET /admin/office-locations'), call('GET /admin/users', { per_page: 200 })]).then(function (r) {
+    var items = r[0].items, users = r[1].items;
+    var rows = items.map(function (o) {
+      var n = users.filter(function (u) { return String(u.office_location_id) === String(o.id); }).length;
+      var act = o.is_active === true || o.is_active === 'true' || o.is_active === 'TRUE' || o.is_active === 1 || o.is_active === '1';
+      return '<tr><td><b>' + esc(o.name) + '</b><div class="muted">' + esc(o.address || '—') + '</div></td>' +
+        '<td>' + esc(o.latitude) + ', ' + esc(o.longitude) + '<div class="muted"><a href="https://maps.google.com/?q=' + encodeURIComponent(o.latitude + ',' + o.longitude) + '" target="_blank" rel="noopener">Cek di Maps</a></div></td>' +
+        '<td>' + esc(o.radius_m || 100) + ' m</td><td>' + n + '</td><td>' + badge(act ? 'active' : 'inactive') + '</td>' +
+        '<td><div class="row-actions"><button class="btn btn-ghost btn-sm" onclick="locForm(' + o.id + ')">Edit</button><button class="btn btn-ghost btn-sm" onclick="toggleLoc(' + o.id + ',' + (act ? 'false' : 'true') + ')">' + (act ? 'Nonaktifkan' : 'Aktifkan') + '</button><button class="btn btn-danger btn-sm" onclick="delLoc(' + o.id + ',\'' + esc(o.name) + '\')">Hapus</button></div></td></tr>';
+    }).join('');
+    $('#locBox').innerHTML = '<div class="table-wrap"><table><thead><tr><th>Lokasi</th><th>Koordinat</th><th>Radius</th><th>Karyawan</th><th>Status</th><th></th></tr></thead><tbody>' + (rows || emptyRow(6, 'Belum ada lokasi kantor.')) + '</tbody></table></div>';
+  }).catch(failRender);
+}
+function locForm(id) {
+  var isEdit = id !== undefined;
+  var build = function (o) {
+    o = o || {};
+    var act = o.is_active === undefined || o.is_active === true || o.is_active === 'true' || o.is_active === 'TRUE' || o.is_active === 1 || o.is_active === '1';
+    openModal('<h3>' + (isEdit ? 'Edit' : 'Tambah') + ' Lokasi Kantor</h3>' +
+      '<div class="field"><label>Nama lokasi</label><input id="mName" value="' + esc(o.name || '') + '" placeholder="cth: Kantor Pusat"></div>' +
+      '<div class="field"><label>Alamat</label><input id="mAddr" value="' + esc(o.address || '') + '" placeholder="Jl. …"></div>' +
+      '<div class="grid2" style="gap:12px"><div class="field"><label>Latitude</label><input id="mLat" type="number" step="any" value="' + esc(o.latitude != null ? o.latitude : '') + '" placeholder="-6.2"></div><div class="field"><label>Longitude</label><input id="mLng" type="number" step="any" value="' + esc(o.longitude != null ? o.longitude : '') + '" placeholder="106.816666"></div></div>' +
+      '<div class="field"><label>Radius absensi (meter)</label><input id="mRad" type="number" min="10" max="5000" value="' + esc(o.radius_m != null ? o.radius_m : 100) + '"></div>' +
+      '<div class="toolbar" style="margin-bottom:14px"><button class="btn btn-ghost btn-sm" onclick="$(\'#mRad\').value=50">50 m</button><button class="btn btn-ghost btn-sm" onclick="$(\'#mRad\').value=100">100 m</button><button class="btn btn-ghost btn-sm" onclick="$(\'#mRad\').value=200">200 m</button><button class="btn btn-ghost btn-sm" onclick="$(\'#mRad\').value=500">500 m</button><button class="btn btn-ghost btn-sm" id="mGps">📍 Lokasi saya</button></div>' +
+      '<div class="field"><label><input type="checkbox" id="mAct" style="width:auto" ' + (act ? 'checked' : '') + '> Lokasi aktif (bisa dipakai check-in)</label></div>' +
+      '<div class="err" id="mErr"></div><div class="actions"><button class="btn btn-ghost" onclick="closeModal()">Batal</button><button class="btn" id="mSave">Simpan</button></div>');
+    $('#mGps').onclick = function () {
+      if (!navigator.geolocation) { $('#mErr').textContent = 'GPS tidak tersedia di browser ini.'; return; }
+      $('#mGps').disabled = true;
+      navigator.geolocation.getCurrentPosition(function (p) { $('#mLat').value = p.coords.latitude; $('#mLng').value = p.coords.longitude; $('#mGps').disabled = false; toast('Koordinat terisi dari GPS.', 'good'); }, function () { $('#mGps').disabled = false; $('#mErr').textContent = 'Izin GPS ditolak.'; }, { enableHighAccuracy: true, timeout: 15000 });
+    };
+    $('#mSave').onclick = function () {
+      var lat = Number($('#mLat').value), lng = Number($('#mLng').value), rad = Number($('#mRad').value);
+      var d = { name: $('#mName').value.trim(), address: $('#mAddr').value.trim(), latitude: lat, longitude: lng, radius_m: rad, is_active: $('#mAct').checked };
+      if (!d.name) { $('#mErr').textContent = 'Nama lokasi wajib diisi.'; return; }
+      if ($('#mLat').value === '' || $('#mLng').value === '' || isNaN(lat) || lat < -90 || lat > 90 || isNaN(lng) || lng < -180 || lng > 180) { $('#mErr').textContent = 'Koordinat tidak valid. Isi manual atau pakai tombol GPS.'; return; }
+      if (isNaN(rad) || rad < 10 || rad > 5000) { $('#mErr').textContent = 'Radius harus 10–5000 meter.'; return; }
+      $('#mSave').disabled = true;
+      call(isEdit ? 'PUT /admin/office-locations/' + id : 'POST /admin/office-locations', d).then(function () { closeModal(); toast('Lokasi disimpan.', 'good'); loadLocations(); }).catch(function (e) { $('#mErr').textContent = e.message; $('#mSave').disabled = false; });
+    };
+  };
+  if (isEdit) call('GET /admin/office-locations/' + id).then(function (d) { build(d.item); }).catch(function (e) { toast(e.message, 'bad'); });
+  else build();
+}
+function toggleLoc(id, val) { call('PUT /admin/office-locations/' + id, { is_active: val }).then(function () { toast('Status lokasi diperbarui.', 'good'); loadLocations(); }).catch(function (e) { toast(e.message, 'bad'); }); }
+function delLoc(id, name) { confirmModal('Hapus Lokasi', 'Hapus "' + name + '"? Karyawan yang di-assign ke sini akan fallback ke kantor aktif pertama.', 'Hapus', function () { call('DELETE /admin/office-locations/' + id).then(function () { toast('Lokasi dihapus.', 'good'); loadLocations(); }).catch(function (e) { toast(e.message, 'bad'); }); }); }
+
+/* ================= REPORTS ================= */
+S.f.reports = { month: new Date().getMonth() + 1, year: new Date().getFullYear() };
+RENDER.reports = function () {
+  var f = S.f.reports;
+  $('#content').innerHTML = '<div class="toolbar"><select id="rMonth">' + Array.apply(null, Array(12)).map(function (_, i) { return '<option value="' + (i + 1) + '">' + namaBulan(i + 1) + '</option>'; }).join('') + '</select><input type="number" id="rYear" value="' + f.year + '" style="width:100px"><button class="btn" id="rGo">Tampilkan</button></div><div id="rBox">' + loading() + '</div>';
+  $('#rMonth').value = f.month;
+  $('#rGo').onclick = function () { f.month = Number($('#rMonth').value); f.year = Number($('#rYear').value); loadReports(); };
+  loadReports();
+};
+function namaBulan(m) { return ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'][m - 1]; }
+function loadReports() {
+  var f = S.f.reports;
+  call('GET /admin/reports', { month: f.month, year: f.year }).then(function (d) {
+    var it = d.item, c = it.attendance.counts;
+    $('#rBox').innerHTML = '<div class="cards">' + stat('Pemasukan', rp(it.financial.total_income), 'green') + stat('Pengeluaran', rp(it.financial.total_expense), 'red') + stat('Selisih', rp(it.financial.net), 'accent') + stat('Total Pengguna', it.total_users, '') + stat('Izin Pending', it.pending_leaves, 'amber') + '</div>' +
+      '<div class="panel"><h3>Rekap Absensi — ' + namaBulan(it.period.month) + ' ' + it.period.year + '</h3><div class="table-wrap"><table><thead><tr><th>Hadir</th><th>Terlambat</th><th>Absen</th><th>Izin</th><th>Sakit</th><th>Libur</th><th>Total</th></tr></thead><tbody><tr><td>' + c.present + '</td><td>' + c.late + '</td><td>' + c.absent + '</td><td>' + c.permission + '</td><td>' + c.sick + '</td><td>' + c.holiday + '</td><td><b>' + it.attendance.total + '</b></td></tr></tbody></table></div></div>';
+  }).catch(failRender);
+}
+
+/* ---------- misc ---------- */
+function debounce(fn, ms) { var t; return function () { var self = this, a = arguments; clearTimeout(t); t = setTimeout(function () { fn.apply(self, a); }, ms); }; }
+
+/* ---------- boot ---------- */
+(function () {
+  var saved = read('mt_admin_token');
+  if (!saved) return showLogin();
+  S.token = saved;
+  call('GET /profile').then(function (d) {
+    if (['admin', 'super_admin'].indexOf(d.user.role) < 0) throw new Error('not admin');
+    S.user = d.user; enterApp();
+  }).catch(function () { S.token = null; drop('mt_admin_token'); showLogin(); });
+})();
+</script>
+</body>
+</html>
