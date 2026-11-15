@@ -1,5 +1,5 @@
 /* MoneyTrack PWA service worker — app-shell offline, API always network. */
-var CACHE = 'moneytrack-pwa-v3';
+var CACHE = 'moneytrack-pwa-v4';
 var SHELL = ['.', 'index.html', 'manifest.webmanifest', 'icons/icon.svg', 'icons/icon-180.png', 'icons/icon-192.png', 'icons/icon-512.png'];
 
 self.addEventListener('install', function (e) {

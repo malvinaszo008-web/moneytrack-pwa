@@ -308,6 +308,7 @@ RENDER.profile=function(){
   var u=S.user;
   var h='<div class="card"><div style="display:flex;gap:14px;align-items:center"><div class="logo" style="margin:0">'+esc((u.name||'U').charAt(0).toUpperCase())+'</div><div><b style="font-size:16px">'+esc(u.name)+'</b><div class="muted small">'+esc(u.email)+'</div><div style="margin-top:6px">'+badge(u.role==='employee'?'active':u.role)+'</div></div></div><div class="grid2" style="margin-top:14px"><div class="stat"><div class="l">Departemen</div><div class="v" style="font-size:14px">'+esc(u.department||'—')+'</div></div><div class="stat"><div class="l">Posisi</div><div class="v" style="font-size:14px">'+esc(u.position||'—')+'</div></div></div></div>';
   h+='<div class="card"><h3>Akun</h3><div class="list"><div class="item"><div class="t"><b>Ganti password</b><span>Perbarui kata sandi kamu</span></div><button class="btn sm ghost" onclick="pwForm()">Ubah</button></div><div class="item"><div class="t"><b>Install aplikasi</b><span>Tambahkan ke layar utama</span></div><button class="btn sm gold" onclick="showInstall()">Install</button></div><div class="item"><div class="t"><b>Keluar</b><span>Akhiri sesi di perangkat ini</span></div><button class="btn sm danger" onclick="logout()">Keluar</button></div></div></div>';
+  h+='<p class="muted small" style="text-align:center;margin:2px 0 10px">MoneyTrack PWA · build 4</p>';
   $('#view').innerHTML=h;
 };
 function pwForm(){openSheet('<h3>Ganti password</h3><div class="field"><label>Password saat ini</label><input id="pCur" type="password"></div><div class="field"><label>Password baru (min. 8)</label><input id="pNew" type="password"></div><div class="err" id="pErr"></div><div class="actions"><button class="btn ghost" onclick="closeSheet()">Batal</button><button class="btn" id="pSave">Simpan</button></div>');$('#pSave').onclick=function(){api('PUT /profile/password',{current_password:$('#pCur').value,password:$('#pNew').value}).then(function(){closeSheet();toast('Password diperbarui.','good')}).catch(function(e){$('#pErr').textContent=e.message})}}
@@ -346,7 +347,12 @@ $('#installBtn').onclick=showInstall;
 
 /* ---------- boot ---------- */
 (function(){var t=read('mt_pwa_token');if(!t)return showAuth();S.token=t;api('GET /profile').then(function(d){S.user=d.user;enterApp()}).catch(function(){S.token=null;drop('mt_pwa_token');showAuth()})})();
-if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('sw.js?v=3').catch(function(){})})}
+if('serviceWorker' in navigator){window.addEventListener('load',function(){
+  navigator.serviceWorker.register('sw.js?v=4').then(function(reg){
+    reg.update(); // force-check now, don't wait for the browser's cached update check
+    setInterval(function(){reg.update()},300000);
+  }).catch(function(){});
+})}
 </script>
 </body>
 </html>
