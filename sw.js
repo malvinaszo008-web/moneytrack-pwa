@@ -1,9 +1,14 @@
 /* MoneyTrack PWA service worker — app-shell offline, API always network. */
-var CACHE = 'moneytrack-pwa-v2';
+var CACHE = 'moneytrack-pwa-v3';
 var SHELL = ['.', 'index.html', 'manifest.webmanifest', 'icons/icon.svg', 'icons/icon-180.png', 'icons/icon-192.png', 'icons/icon-512.png'];
 
 self.addEventListener('install', function (e) {
-  e.waitUntil(caches.open(CACHE).then(function (c) { return c.addAll(SHELL); }).then(function () { return self.skipWaiting(); }));
+  e.waitUntil(caches.open(CACHE).then(function (c) {
+    // no-cache: never seed the shell from a stale HTTP-cache entry.
+    return Promise.all(SHELL.map(function (u) {
+      return fetch(u, { cache: 'no-cache' }).then(function (r) { return c.put(u, r); });
+    }));
+  }).then(function () { return self.skipWaiting(); }));
 });
 
 self.addEventListener('activate', function (e) {
@@ -18,11 +23,12 @@ self.addEventListener('fetch', function (e) {
   var url = new URL(req.url);
   if (url.origin !== self.location.origin) return; // GAS API & Drive: pass through
 
-  // Navigations: network first, fall back to cached shell when offline.
+  // Navigations: ALWAYS revalidate with the network (bypass the HTTP cache,
+  // which on GitHub Pages is fresh for 10 min), fall back to shell only offline.
   if (req.mode === 'navigate') {
-    e.respondWith(fetch(req).then(function (res) {
+    e.respondWith(fetch(req, { cache: 'no-cache' }).then(function (res) {
       var copy = res.clone();
-      caches.open(CACHE).then(function (c) { c.put('index.html', copy); });
+      caches.open(CACHE).then(function (c) { c.put('index.html', copy); c.put('.', copy.clone()); });
       return res;
     }).catch(function () { return caches.match('index.html'); }));
     return;

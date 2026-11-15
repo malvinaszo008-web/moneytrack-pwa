@@ -346,7 +346,7 @@ $('#installBtn').onclick=showInstall;
 
 /* ---------- boot ---------- */
 (function(){var t=read('mt_pwa_token');if(!t)return showAuth();S.token=t;api('GET /profile').then(function(d){S.user=d.user;enterApp()}).catch(function(){S.token=null;drop('mt_pwa_token');showAuth()})})();
-if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('sw.js').catch(function(){})})}
+if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('sw.js?v=3').catch(function(){})})}
 </script>
 </body>
 </html>
