@@ -128,12 +128,12 @@ nav button.on .n{background:linear-gradient(140deg,var(--gold2),var(--gold));col
   <div class="auth-card">
     <div class="logo">M</div>
     <h1>MoneyTrack</h1>
-    <p class="tag">Konsol Super Admin. Data tersimpan di Cloudflare D1.</p>
-    <div class="field"><label>Email Super Admin</label><input id="aEmail" type="email" autocomplete="username" placeholder="superadmin@moneytrack.local"></div>
+    <p class="tag">Uang & absensi dalam satu genggaman.</p>
+    <div class="field"><label>Email</label><input id="aEmail" type="email" autocomplete="username" placeholder="nama@perusahaan.com"></div>
     <div class="field"><label>Password</label><input id="aPass" type="password" autocomplete="current-password" placeholder="Password"></div>
-    <button class="btn block" id="aGo">Masuk sebagai Super Admin</button>
+    <button class="btn block" id="aGo">Masuk</button>
     <div class="err" id="aErr"></div>
-    <p class="muted small" style="margin-top:14px;text-align:center">Hanya akun ber-role <b>super_admin</b> yang bisa masuk.</p>
+    <p class="muted small" style="margin-top:14px;text-align:center">Semua karyawan bisa absen di sini. Menu <b>Admin</b> hanya untuk Admin / Super Admin.</p>
   </div>
 </div>
 
@@ -196,17 +196,12 @@ function closeSheet(){$('#overlay').classList.add('hidden');$('#sheet').innerHTM
 $('#overlay').addEventListener('click',function(e){if(e.target===this)closeSheet()});
 function confirmSheet(title,msg,yes,fn){openSheet('<h3>'+esc(title)+'</h3><p class="muted">'+esc(msg)+'</p><div class="actions"><button class="btn ghost" onclick="closeSheet()">Batal</button><button class="btn danger" id="cfYes">'+esc(yes)+'</button></div>');$('#cfYes').onclick=function(){closeSheet();fn()}}
 
-/* ---------- auth (khusus super admin) ---------- */
-function isSuperAdmin(u){return !!u&&u.role==='super_admin'}
+/* ---------- auth ---------- */
 $('#aGo').onclick=function(){
   var email=$('#aEmail').value.trim(),pass=$('#aPass').value;$('#aErr').textContent='';
   if(!email||!pass){$('#aErr').textContent='Email & password wajib diisi.';return}
   $('#aGo').disabled=true;
   api('POST /auth/login',{email:email,password:pass},'').then(function(d){
-    if(!isSuperAdmin(d.user)){
-      api('POST /auth/logout',{},d.token).catch(function(){});
-      throw new Error('Akun ini bukan Super Admin. PWA ini khusus Super Admin.');
-    }
     S.token=d.token;S.user=d.user;store('mt_pwa_token',d.token);enterApp();toast('Selamat datang, '+d.user.name,'good')
   }).catch(function(e){$('#aErr').textContent=e.message})
     .then(function(){$('#aGo').disabled=false});
@@ -278,7 +273,8 @@ RENDER.att=function(){loading();
     if(!a||!a.check_in_at)h+='<button class="btn gold" style="flex:1" onclick="doCheck(\'in\')">📍 Check In</button>';
     if(a&&a.check_in_at&&!a.check_out_at)h+='<button class="btn" style="flex:1" onclick="doCheck(\'out\')">🏁 Check Out</button>';
     if(a&&a.check_out_at)h+='<p class="muted small">Selesai untuk hari ini. Terima kasih!</p>';
-    h+='</div></div>';
+    h+='</div>';
+    h+='<button class="btn sm ghost block" style="margin-top:10px" onclick="attHelp()">Cara absen</button></div>';
     h+='<div class="card"><h3>Riwayat</h3><div class="list">'+(hist.map(function(x){return '<div class="item"><div class="ic" style="background:#e3eef7">📍</div><div class="t"><b>'+fdate(x.date)+'</b><span>'+esc(x.office_location||'')+' · '+(x.check_in_time||'—')+' → '+(x.check_out_time||'—')+'</span></div>'+badge(x.status)+'</div>'}).join('')||'<div class="empty">Belum ada riwayat.</div>')+'</div></div>';
     $('#view').innerHTML=h;
   }).catch(failFor('att'))};
@@ -333,6 +329,7 @@ function compressImage(dataUrl){return new Promise(function(res){
     img.src=dataUrl;
   }catch(e){res(dataUrl)}
 })}
+function attHelp(){openSheet('<h3>Cara absen</h3><p class="muted small" style="line-height:1.8">1. Login dengan akun kamu.<br>2. Buka tab <b>Absen</b>.<br>3. Tap <b>Check In</b>, lalu izinkan akses <b>lokasi</b>.<br>4. Ambil <b>selfie</b> saat diminta (kamera/file).<br>5. Saat pulang, tap <b>Check Out</b> dan selfie lagi.<br><br>Absen hanya diterima jika posisi kamu berada dalam radius kantor yang diatur admin. Kalau muncul pesan di luar radius, minta admin menyesuaikan titik/radius di menu <b>Admin → Lokasi</b>.</p><div class="actions"><button class="btn" onclick="closeSheet()">Mengerti</button></div>')}
 function doCheck(kind){
   if(S.busyCheck)return;
   S.busyCheck=true;
@@ -374,7 +371,7 @@ RENDER.profile=function(){
   var u=S.user;
   var h='<div class="card"><div style="display:flex;gap:14px;align-items:center"><div class="logo" style="margin:0">'+esc((u.name||'U').charAt(0).toUpperCase())+'</div><div><b style="font-size:16px">'+esc(u.name)+'</b><div class="muted small">'+esc(u.email)+'</div><div style="margin-top:6px">'+badge(u.role==='employee'?'active':u.role)+'</div></div></div><div class="grid2" style="margin-top:14px"><div class="stat"><div class="l">Departemen</div><div class="v" style="font-size:14px">'+esc(u.department||'—')+'</div></div><div class="stat"><div class="l">Posisi</div><div class="v" style="font-size:14px">'+esc(u.position||'—')+'</div></div></div></div>';
   h+='<div class="card"><h3>Akun</h3><div class="list"><div class="item"><div class="t"><b>Ganti password</b><span>Perbarui kata sandi kamu</span></div><button class="btn sm ghost" onclick="pwForm()">Ubah</button></div><div class="item"><div class="t"><b>Install aplikasi</b><span>Tambahkan ke layar utama</span></div><button class="btn sm gold" onclick="showInstall()">Install</button></div><div class="item"><div class="t"><b>Keluar</b><span>Akhiri sesi di perangkat ini</span></div><button class="btn sm danger" onclick="logout()">Keluar</button></div></div></div>';
-  h+='<p class="muted small" style="text-align:center;margin:2px 0 10px">MoneyTrack PWA · build 7 · Cloudflare Worker + D1</p>';
+  h+='<p class="muted small" style="text-align:center;margin:2px 0 10px">MoneyTrack PWA · build 8 · Cloudflare Worker + D1</p>';
   $('#view').innerHTML=h;
 };
 function pwForm(){openSheet('<h3>Ganti password</h3><div class="field"><label>Password saat ini</label><input id="pCur" type="password"></div><div class="field"><label>Password baru (min. 8)</label><input id="pNew" type="password"></div><div class="err" id="pErr"></div><div class="actions"><button class="btn ghost" onclick="closeSheet()">Batal</button><button class="btn" id="pSave">Simpan</button></div>');$('#pSave').onclick=function(){api('PUT /profile/password',{current_password:$('#pCur').value,password:$('#pNew').value}).then(function(){closeSheet();toast('Password diperbarui.','good')}).catch(function(e){$('#pErr').textContent=e.message})}}
@@ -388,8 +385,30 @@ RENDER.admin=function(){
   ({dash:adminDash,users:adminUsers,tx:adminTx,att:adminAtt,leave:adminLeave,loc:adminLoc,reports:adminReports})[S.f.admin.sub]();
 };
 function adminDash(){var sub=S.f.admin.sub;api('GET /admin/dashboard').then(function(d){if(S.tab!=='admin'||S.f.admin.sub!==sub)return;var i=d.item;$('#adminBox').innerHTML='<div class="grid2"><div class="stat"><div class="l">Pengguna</div><div class="v dom">'+i.total_users+'</div></div><div class="stat"><div class="l">Aktif</div><div class="v green">'+i.active_users+'</div></div><div class="stat"><div class="l">Hadir hari ini</div><div class="v green">'+i.present_today+'</div></div><div class="stat"><div class="l">Terlambat</div><div class="v amber">'+i.late_today+'</div></div><div class="stat"><div class="l">Belum absen</div><div class="v red">'+i.absent_today+'</div></div><div class="stat"><div class="l">Izin pending</div><div class="v amber">'+i.pending_leaves+'</div></div></div>'}).catch(failFor('admin',sub))}
-function adminUsers(){var sub=S.f.admin.sub;api('GET /admin/users',{per_page:50}).then(function(d){if(S.tab!=='admin'||S.f.admin.sub!==sub)return;$('#adminBox').innerHTML='<div class="card"><h3>Pengguna <button class="btn sm gold" onclick="userForm()">+ Tambah</button></h3><div class="list">'+d.items.map(function(u){return '<div class="item"><div class="ic" style="background:#e3eef7">'+esc(u.name.charAt(0).toUpperCase())+'</div><div class="t"><b>'+esc(u.name)+'</b><span>'+esc(u.email)+' · '+esc(u.role)+'</span></div><div style="display:flex;gap:6px"><button class="btn sm ghost" onclick="resetPw('+u.id+')">PW</button><button class="btn sm danger" onclick="delUser('+u.id+',\''+esc(u.name)+'\')">✕</button></div></div>'}).join('')+'</div></div>'}).catch(failFor('admin',sub))}
-function userForm(){openSheet('<h3>Tambah pengguna</h3><div class="field"><label>Nama</label><input id="uName"></div><div class="field"><label>Email</label><input id="uEmail" type="email"></div><div class="field"><label>Password (min. 8)</label><input id="uPass" type="password"></div><div class="field"><label>Role</label><select id="uRole"><option value="employee">employee</option><option value="admin">admin</option></select></div><div class="err" id="uErr"></div><div class="actions"><button class="btn ghost" onclick="closeSheet()">Batal</button><button class="btn" id="uSave">Simpan</button></div>');$('#uSave').onclick=function(){api('POST /admin/users',{name:$('#uName').value.trim(),email:$('#uEmail').value.trim(),password:$('#uPass').value,role:$('#uRole').value}).then(function(){closeSheet();toast('Pengguna dibuat.','good');RENDER.admin()}).catch(function(e){$('#uErr').textContent=e.message})}}
+function adminUsers(){var sub=S.f.admin.sub;api('GET /admin/users',{per_page:50}).then(function(d){if(S.tab!=='admin'||S.f.admin.sub!==sub)return;$('#adminBox').innerHTML='<div class="card"><h3>Pengguna <button class="btn sm gold" onclick="userForm()">+ Tambah</button></h3><div class="list">'+d.items.map(function(u){return '<div class="item"><div class="ic" style="background:#e3eef7">'+esc(u.name.charAt(0).toUpperCase())+'</div><div class="t"><b>'+esc(u.name)+'</b><span>'+esc(u.email)+' · '+esc(u.role)+' · '+esc(u.office_location||'kantor default')+'</span></div><div style="display:flex;gap:6px"><button class="btn sm ghost" onclick="userForm('+u.id+')">Edit</button><button class="btn sm ghost" onclick="resetPw('+u.id+')">PW</button><button class="btn sm danger" onclick="delUser('+u.id+',\''+esc(u.name)+'\')">✕</button></div></div>'}).join('')+'</div></div>'}).catch(failFor('admin',sub))}
+function userForm(id){
+  var isEdit=id!==undefined;
+  Promise.all([api('GET /admin/office-locations'),isEdit?api('GET /admin/users/'+id):Promise.resolve(null)]).then(function(r){
+    var offs=r[0].items,u=isEdit?r[1].item:null;
+    var opts='<option value="">Ikuti kantor aktif pertama</option>'+offs.map(function(o){return '<option value="'+o.id+'"'+(u&&String(u.office_location_id)===String(o.id)?' selected':'')+'>'+esc(o.name)+'</option>'}).join('');
+    var roles=['employee','admin','super_admin'].map(function(x){return '<option value="'+x+'"'+(u&&u.role===x?' selected':'')+'>'+x+'</option>'}).join('');
+    openSheet('<h3>'+(isEdit?'Edit':'Tambah')+' pengguna</h3>'
+      +'<div class="field"><label>Nama</label><input id="uName" value="'+esc(u?u.name:'')+'"></div>'
+      +'<div class="field"><label>Email</label><input id="uEmail" type="email" value="'+esc(u?u.email:'')+'"></div>'
+      +(isEdit?'':'<div class="field"><label>Password (min. 8)</label><input id="uPass" type="password"></div>')
+      +'<div class="field"><label>Role</label><select id="uRole">'+roles+'</select></div>'
+      +'<div class="field"><label>Lokasi kantor</label><select id="uOffice">'+opts+'</select></div>'
+      +'<div class="field"><label style="display:flex;align-items:center;gap:8px"><input type="checkbox" id="uAct" style="width:auto"'+(u&&u.is_active===false?'':' checked')+'> Akun aktif</label></div>'
+      +'<div class="err" id="uErr"></div><div class="actions"><button class="btn ghost" onclick="closeSheet()">Batal</button><button class="btn" id="uSave">Simpan</button></div>');
+    $('#uSave').onclick=function(){
+      var d={name:$('#uName').value.trim(),email:$('#uEmail').value.trim(),role:$('#uRole').value,office_location_id:$('#uOffice').value?Number($('#uOffice').value):null,is_active:$('#uAct').checked};
+      if(!d.name||!d.email){$('#uErr').textContent='Nama & email wajib diisi.';return}
+      if(!isEdit){d.password=$('#uPass').value;if(!d.password||d.password.length<8){$('#uErr').textContent='Password minimal 8 karakter.';return}}
+      $('#uSave').disabled=true;
+      (isEdit?api('PUT /admin/users/'+id,d):api('POST /admin/users',d)).then(function(){closeSheet();toast(isEdit?'Pengguna diperbarui.':'Pengguna dibuat.','good');RENDER.admin()}).catch(function(e){$('#uErr').textContent=e.message;$('#uSave').disabled=false});
+    };
+  }).catch(function(e){toast(e.message,'bad')});
+}
 function resetPw(id){openSheet('<h3>Reset password</h3><div class="field"><label>Password baru</label><input id="rPass" type="password"></div><div class="err" id="rErr"></div><div class="actions"><button class="btn ghost" onclick="closeSheet()">Batal</button><button class="btn" id="rSave">Reset</button></div>');$('#rSave').onclick=function(){api('POST /admin/users/'+id+'/reset-password',{password:$('#rPass').value}).then(function(){closeSheet();toast('Password direset.','good')}).catch(function(e){$('#rErr').textContent=e.message})}}
 function delUser(id,name){confirmSheet('Hapus pengguna','Hapus "'+name+'"?','Hapus',function(){api('DELETE /admin/users/'+id).then(function(){toast('Dihapus.','good');RENDER.admin()}).catch(function(e){toast(e.message,'bad')})})}
 function adminLeave(){var sub=S.f.admin.sub;api('GET /admin/leave',{per_page:50}).then(function(d){if(S.tab!=='admin'||S.f.admin.sub!==sub)return;$('#adminBox').innerHTML='<div class="card"><h3>Pengajuan izin</h3><div class="list">'+(d.items.map(function(l){var act=l.status==='pending'?'<div style="display:flex;gap:6px"><button class="btn sm" onclick="apprLeave('+l.id+')">✓</button><button class="btn sm danger" onclick="rejLeave('+l.id+')">✕</button></div>':'';return '<div class="item"><div class="t"><b>'+esc(l.user_name)+' · '+esc(l.type)+'</b><span>'+fdate(l.start_date)+' → '+fdate(l.end_date)+' · '+esc(l.reason)+'</span></div><div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end">'+badge(l.status)+act+'</div></div>'}).join('')||'<div class="empty">Tidak ada pengajuan.</div>')+'</div></div>'}).catch(failFor('admin',sub))}
@@ -481,12 +500,9 @@ function showInstall(){
 $('#installBtn').onclick=showInstall;
 
 /* ---------- boot ---------- */
-(function(){var t=read('mt_pwa_token');if(!t)return showAuth();S.token=t;api('GET /profile').then(function(d){
-  if(!isSuperAdmin(d.user)){S.token=null;drop('mt_pwa_token');showAuth();$('#aErr').textContent='Sesi ini bukan Super Admin. Masuk dengan akun Super Admin.';return}
-  S.user=d.user;enterApp()
-}).catch(function(){S.token=null;drop('mt_pwa_token');showAuth()})})();
+(function(){var t=read('mt_pwa_token');if(!t)return showAuth();S.token=t;api('GET /profile').then(function(d){S.user=d.user;enterApp()}).catch(function(){S.token=null;drop('mt_pwa_token');showAuth()})})();
 if('serviceWorker' in navigator){window.addEventListener('load',function(){
-  navigator.serviceWorker.register('sw.js?v=7').then(function(reg){
+  navigator.serviceWorker.register('sw.js?v=8').then(function(reg){
     reg.update(); // force-check now, don't wait for the browser's cached update check
     setInterval(function(){reg.update()},300000);
   }).catch(function(){});

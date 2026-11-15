@@ -3,7 +3,7 @@
   "short_name": "MoneyTrack",
   "description": "Lacak uang dan absensi GPS dari iPhone maupun Android. Install sebagai aplikasi.",
   "id": "/",
-  "start_url": "./?v=7",
+  "start_url": "./?v=8",
   "scope": ".",
   "display": "standalone",
   "orientation": "portrait",
